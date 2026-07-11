@@ -44,17 +44,20 @@ export default function PricingPage() {
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                   yearly ? 'bg-brand-900 text-brand-300' : 'bg-brand-800 text-brand-500'
                 }`}>
-                  SAVE 17%
+                  SAVE 19%
                 </span>
               </button>
             </div>
           </div>
 
-          {/* Plans Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto items-start">
+          {/* Plans Grid with Glow */}
+          <div className="relative">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-white/[0.03] rounded-full blur-[200px] pointer-events-none" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto items-start relative z-10">
             {plans.map((plan) => (
               <PlanCard key={plan.tier} plan={plan} yearly={yearly} />
             ))}
+            </div>
           </div>
 
           {/* Guarantee */}

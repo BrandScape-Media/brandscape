@@ -122,7 +122,7 @@ export default function HomePage() {
       </section>
 
       {/* ===== TRUSTED BY / LOGOS ===== */}
-      <section className="py-20 bg-brand-950 border-y border-white/5">
+      <section className="py-20 bg-brand-900/40 border-y border-white/5">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <p className="text-center text-brand-600 text-xs font-heading tracking-[0.3em] uppercase mb-10">
             Trusted by forward-thinking agencies worldwide
@@ -212,8 +212,9 @@ export default function HomePage() {
       </section>
 
       {/* ===== WORKFLOW ===== */}
-      <section id="workflow" className="py-32 bg-brand-black relative overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-white/[0.015] rounded-full blur-[200px]" />
+      <section id="workflow" className="py-32 bg-brand-900/20 relative overflow-hidden">
+        <div className="absolute top-1/4 left-1/3 w-[700px] h-[500px] bg-white/[0.04] rounded-full blur-[200px]" />
+        <div className="absolute bottom-1/4 right-1/3 w-[500px] h-[400px] bg-white/[0.03] rounded-full blur-[160px]" />
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8">
           <div className={`text-center mb-24 transition-all duration-700 ${inView('workflow') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
@@ -245,7 +246,7 @@ export default function HomePage() {
                 >
                   <div className="relative bg-brand-900/40 border border-white/5 rounded-xl p-5 text-center hover:border-white/20 hover:bg-brand-900/60 transition-all duration-300">
                     {/* Step Number */}
-                    <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-6 h-6 bg-brand-black border border-white/20 rounded-full flex items-center justify-center text-[10px] font-heading font-bold text-brand-400 z-10">
+                    <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-6 h-6 bg-brand-900 border border-white/20 rounded-full flex items-center justify-center text-[10px] font-heading font-bold text-brand-400 z-10">
                       {i + 1}
                     </span>
 
@@ -266,7 +267,7 @@ export default function HomePage() {
 
           {/* Feedback Loop */}
           <div className="mt-16 text-center">
-            <div className="inline-flex items-center gap-3 px-6 py-3.5 border border-white/10 rounded-full bg-white/[0.01] backdrop-blur-sm">
+            <div className="inline-flex items-center gap-3 px-6 py-3.5 border border-white/10 rounded-full bg-white/[0.02] backdrop-blur-sm">
               <svg className="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
@@ -279,8 +280,9 @@ export default function HomePage() {
       </section>
 
       {/* ===== COMPARISON: Traditional vs Brandscape ===== */}
-      <section id="why" className="py-32 bg-brand-950">
-        <div className="max-w-5xl mx-auto px-6 lg:px-8">
+      <section id="why" className="py-32 bg-brand-950 relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[400px] bg-white/[0.02] rounded-full blur-[200px]" />
+        <div className="max-w-5xl mx-auto px-6 lg:px-8 relative z-10">
           <div className={`text-center mb-20 transition-all duration-700 ${inView('comparison') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <span className="font-heading text-xs tracking-[0.3em] uppercase text-brand-500 mb-4 block">
               Why Brandscape
@@ -323,7 +325,7 @@ export default function HomePage() {
 
             {/* The Brandscape Way */}
             <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-8 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/[0.02] rounded-full blur-[60px]" />
+              <div className="absolute top-0 right-0 w-40 h-40 bg-white/[0.04] rounded-full blur-[80px]" />
               <div className="flex items-center gap-3 mb-8">
                 <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
                   <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -587,25 +589,28 @@ function TrustStat({ label, value }: { label: string; value: string }) {
 function FeatureCard({ title, description, icon, delay }: { title: string; description: string; icon: string; delay: number }) {
   return (
     <div
-      className="bg-brand-black p-8 group hover:bg-brand-900/60 transition-all duration-300 relative overflow-hidden"
+      className="bg-brand-black p-8 group hover:bg-brand-900/40 transition-all duration-500 relative overflow-hidden"
       style={{ transitionDelay: `${delay}ms` }}
     >
-      <div className="absolute top-0 right-0 w-24 h-24 bg-white/[0.01] rounded-full blur-[40px] group-hover:bg-white/[0.03] transition-colors duration-500" />
-      <div className="w-11 h-11 mb-5 rounded-xl bg-white/[0.04] border border-white/5 flex items-center justify-center group-hover:bg-white/[0.08] group-hover:border-white/10 transition-all duration-300">
+      <div className="absolute top-0 right-0 w-32 h-32 bg-white/[0.01] rounded-full blur-[50px] group-hover:bg-white/[0.06] transition-all duration-700" />
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent rounded-2xl" />
+      </div>
+      <div className="w-11 h-11 mb-5 rounded-xl bg-white/[0.04] border border-white/5 flex items-center justify-center group-hover:bg-white/[0.08] group-hover:border-white/15 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.06)] transition-all duration-500 relative z-10">
         <svg className="w-5 h-5 text-brand-300 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={icon} />
         </svg>
       </div>
-      <h3 className="font-heading font-bold text-base mb-3 group-hover:text-white transition-colors">{title}</h3>
-      <p className="text-brand-500 text-sm font-body leading-relaxed">{description}</p>
+      <h3 className="font-heading font-bold text-base mb-3 group-hover:text-white transition-colors relative z-10">{title}</h3>
+      <p className="text-brand-500 group-hover:text-brand-400 text-sm font-body leading-relaxed transition-colors duration-500 relative z-10">{description}</p>
     </div>
   )
 }
 
 function HowItWorksCard({ step, title, description, detail }: { step: string; title: string; description: string; detail: string }) {
   return (
-    <div className="bg-brand-900/20 border border-white/5 rounded-2xl p-8 group hover:border-white/10 transition-all duration-300 flex flex-col">
-      <span className="font-heading font-black text-6xl text-brand-800 mb-6 leading-none">{step}</span>
+    <div className="bg-brand-900/40 border border-white/10 rounded-2xl p-8 group hover:border-white/20 hover:bg-brand-900/60 transition-all duration-300 flex flex-col">
+      <span className="font-heading font-black text-6xl text-brand-700 mb-6 leading-none">{step}</span>
       <h3 className="font-heading font-bold text-xl mb-4">{title}</h3>
       <p className="text-brand-400 text-sm font-body leading-relaxed flex-1">{description}</p>
       <div className="mt-6 pt-6 border-t border-white/5">
