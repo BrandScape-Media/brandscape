@@ -145,4 +145,4 @@ brandscape/
 
 ## License
 
-Private — All rights reserved © 2025 Brandscape
+Private — All rights reserved © 2026 Brandscape
