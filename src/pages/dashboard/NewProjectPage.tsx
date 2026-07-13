@@ -1,9 +1,16 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
+import { useClients } from '../../hooks/useData'
+import { createProject } from '../../lib/api'
 
 export default function NewProjectPage() {
   const navigate = useNavigate()
+  const { user, demoMode } = useAuth()
+  const { data: clients, loading: clientsLoading } = useClients()
   const [step, setStep] = useState(1)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     projectName: '',
     clientId: '',
@@ -23,11 +30,32 @@ export default function NewProjectPage() {
   const handleNext = () => setStep((s) => Math.min(s + 1, 3))
   const handleBack = () => setStep((s) => Math.max(s - 1, 1))
 
-  const handleSubmit = () => {
-    // In production, this would create the project in Supabase
-    // and start the workflow pipeline
-    alert('Project created! (Connect Supabase for full functionality)')
-    navigate('/dashboard/projects')
+  const handleSubmit = async () => {
+    if (demoMode) {
+      setError('Demo mode is read-only — sign in with a real account to create projects.')
+      return
+    }
+    setSubmitting(true)
+    setError(null)
+    try {
+      const project = await createProject(user!.agency_id!, {
+        name: formData.projectName.trim(),
+        client_id: formData.clientId,
+        discovery_data: {
+          budget: formData.budget,
+          timeline: formData.timeline,
+          goals: formData.goals,
+          target_audience: formData.targetAudience,
+          competition: formData.competition,
+          brand_guidelines: formData.brandGuidelines,
+          notes: formData.notes,
+        },
+      })
+      navigate(`/dashboard/projects/${project.id}`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not create the project.')
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -97,11 +125,16 @@ export default function NewProjectPage() {
               onChange={(e) => updateField('clientId', e.target.value)}
               className="w-full px-4 py-3 bg-brand-900 border border-white/10 rounded-lg text-white font-body text-sm focus:outline-none focus:border-white/30 transition-colors"
             >
-              <option value="">Select a client...</option>
-              <option value="1">Nike</option>
-              <option value="2">Spotify</option>
-              <option value="3">Local Coffee Co.</option>
+              <option value="">{clientsLoading ? 'Loading clients…' : 'Select a client...'}</option>
+              {(clients ?? []).map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
             </select>
+            {!clientsLoading && (clients?.length ?? 0) === 0 && (
+              <p className="text-brand-600 text-xs font-body mt-2">
+                No clients yet — <Link to="/dashboard/clients" className="text-brand-400 hover:text-white underline transition-colors">add one first</Link>.
+              </p>
+            )}
           </div>
 
           <div>
@@ -258,6 +291,10 @@ export default function NewProjectPage() {
             </dl>
           </div>
 
+          {error && (
+            <p className="text-red-400 text-xs font-body bg-red-500/5 border border-red-500/15 rounded-lg px-4 py-3">{error}</p>
+          )}
+
           <div className="flex justify-between pt-4">
             <button
               onClick={handleBack}
@@ -267,9 +304,10 @@ export default function NewProjectPage() {
             </button>
             <button
               onClick={handleSubmit}
-              className="px-8 py-3 bg-white text-black font-heading font-bold text-sm tracking-wide rounded-lg hover:bg-brand-200 transition-colors"
+              disabled={submitting}
+              className="px-8 py-3 bg-white text-black font-heading font-bold text-sm tracking-wide rounded-lg hover:bg-brand-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              LAUNCH AI PIPELINE
+              {submitting ? 'CREATING…' : 'LAUNCH AI PIPELINE'}
             </button>
           </div>
         </div>

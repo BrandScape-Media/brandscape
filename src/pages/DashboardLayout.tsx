@@ -1,12 +1,18 @@
 import { useState } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import AgencyOnboarding from '../components/AgencyOnboarding'
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const { user, signOut, demoMode } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+
+  // Real accounts must belong to an agency before using the dashboard
+  if (!demoMode && user && !user.agency_id) {
+    return <AgencyOnboarding />
+  }
 
   const handleSignOut = async () => {
     await signOut()

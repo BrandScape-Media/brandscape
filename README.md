@@ -71,17 +71,26 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ### Set Up Supabase
 
 1. Create a new Supabase project at [supabase.com](https://supabase.com)
-2. Go to SQL Editor and run the schema from `supabase-schema.sql`
+2. Go to SQL Editor and run each file in `supabase/migrations/` **in order**
+   (`001_initial_schema.sql`, then `002_security_and_onboarding.sql`, …).
+   On an existing database, only run the migrations you haven't applied yet.
 3. Enable Google OAuth in Authentication → Providers
 4. Set the redirect URL to `https://brandscape.media/auth/callback`
 5. Copy the URL and anon key to `.env.local`
+
+Migrations are append-only: never edit an applied migration — add a new
+numbered file instead.
 
 ### GitHub Pages Deployment
 
 1. Push code to a GitHub repository
 2. Go to Settings → Pages
 3. Set Source to "GitHub Actions"
-4. The deployment workflow (`.github/workflows/deploy.yml`) handles builds automatically
+4. In Settings → Secrets and variables → Actions, add `VITE_SUPABASE_URL`
+   and `VITE_SUPABASE_ANON_KEY` (the anon key is safe to expose in a build;
+   Row Level Security is what protects the data). Without these secrets the
+   deployed site runs in demo mode.
+5. The deployment workflow (`.github/workflows/deploy.yml`) handles builds automatically
 
 ### Build for Production
 
@@ -108,7 +117,7 @@ brandscape/
 │   ├── App.tsx            # Main app with routing
 │   ├── main.tsx           # Entry point
 │   └── index.css          # Global styles + Tailwind
-├── supabase-schema.sql    # Database schema
+├── supabase/migrations/   # Database schema (run in order, append-only)
 ├── tailwind.config.js     # Tailwind configuration
 └── vite.config.ts         # Vite configuration
 ```
@@ -133,7 +142,8 @@ brandscape/
 - [x] Workflow pipeline UI
 - [x] Pricing page
 - [x] Supabase schema
-- [ ] Supabase integration (live data)
+- [x] Supabase integration (live data: clients, projects, stages, settings)
+- [x] Agency onboarding & multi-tenant Row Level Security
 - [ ] Runpod API integration
 - [ ] AI pipeline orchestration
 - [ ] ComfyUI workflow integration

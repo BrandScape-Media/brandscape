@@ -1,26 +1,20 @@
 import { useState } from 'react'
+import { useAssets } from '../../hooks/useData'
+import { timeAgo } from '../../lib/format'
 
 type MediaType = 'all' | 'image' | 'video' | 'audio'
 
 export default function LibraryPage() {
   const [filter, setFilter] = useState<MediaType>('all')
   const [search, setSearch] = useState('')
+  const { data: assets, loading, error } = useAssets()
 
-  const assets = [
-    { id: '1', type: 'image' as const, name: 'Hero Shot — Nike Summer v3', project: 'Nike — Summer Campaign', status: 'completed' as const, date: '2h ago', size: '4K', format: 'PNG' },
-    { id: '2', type: 'video' as const, name: 'A-Roll — Lifestyle Scene 1', project: 'Nike — Summer Campaign', status: 'completed' as const, date: '3h ago', size: '30s', format: 'MP4' },
-    { id: '3', type: 'video' as const, name: 'B-Roll — Product Detail Close-up', project: 'Nike — Summer Campaign', status: 'generating' as const, date: 'In progress', size: '5s', format: 'MP4' },
-    { id: '4', type: 'image' as const, name: 'Brand Logo Treatment — Dark BG', project: 'Spotify — Brand Redesign', status: 'completed' as const, date: '1d ago', size: '4K', format: 'PNG' },
-    { id: '5', type: 'audio' as const, name: 'Voiceover — Script 1 (Male, Warm)', project: 'Nike — Summer Campaign', status: 'completed' as const, date: '4h ago', size: '45s', format: 'WAV' },
-    { id: '6', type: 'image' as const, name: 'Social Creative A — 1:1 Format', project: 'Adidas — Holiday Ads', status: 'completed' as const, date: '5h ago', size: '1080px', format: 'JPG' },
-    { id: '7', type: 'video' as const, name: 'Final Cut — Hero Video 30s', project: 'Nike — Summer Campaign', status: 'generating' as const, date: 'Rendering...', size: '30s', format: 'MP4' },
-    { id: '8', type: 'audio' as const, name: 'Music — Sunrise Drive (Licensed)', project: 'Nike — Summer Campaign', status: 'completed' as const, date: '6h ago', size: '2:30', format: 'MP3' },
-    { id: '9', type: 'image' as const, name: 'Social Creative B — 9:16 Story', project: 'Adidas — Holiday Ads', status: 'completed' as const, date: '6h ago', size: '1080x1920', format: 'JPG' },
-  ]
-
-  const filtered = assets.filter((a) => {
+  const all = assets ?? []
+  const filtered = all.filter((a) => {
     if (filter !== 'all' && a.type !== filter) return false
-    if (search && !a.name.toLowerCase().includes(search.toLowerCase()) && !a.project.toLowerCase().includes(search.toLowerCase())) return false
+    const name = a.metadata?.name ?? ''
+    const project = a.project_name ?? ''
+    if (search && !name.toLowerCase().includes(search.toLowerCase()) && !project.toLowerCase().includes(search.toLowerCase())) return false
     return true
   })
 
@@ -49,10 +43,16 @@ export default function LibraryPage() {
         <div>
           <h1 className="font-heading font-bold text-2xl">Media Library</h1>
           <p className="text-brand-500 text-sm font-body mt-1">
-            {assets.length} assets across all projects.
+            {loading ? 'Loading assets…' : `${all.length} asset${all.length === 1 ? '' : 's'} across all projects.`}
           </p>
         </div>
       </div>
+
+      {error && (
+        <div className="mb-6 px-4 py-3 bg-red-500/5 border border-red-500/15 rounded-lg">
+          <p className="text-red-400 text-xs font-body">Could not load assets: {error}</p>
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
@@ -89,10 +89,17 @@ export default function LibraryPage() {
       </div>
 
       {/* Assets Grid */}
-      {filtered.length > 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="bg-brand-900/20 border border-white/5 rounded-xl aspect-[4/3] animate-pulse" />
+          ))}
+        </div>
+      ) : filtered.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((asset) => {
             const config = typeConfig[asset.type]
+            const name = asset.metadata?.name ?? `${asset.type} asset`
             return (
               <div
                 key={asset.id}
@@ -100,9 +107,13 @@ export default function LibraryPage() {
               >
                 {/* Preview Area */}
                 <div className={`aspect-video ${config.bg} flex items-center justify-center relative`}>
-                  <svg className="w-10 h-10 text-white/10 group-hover:text-white/20 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d={config.icon} />
-                  </svg>
+                  {asset.thumbnail_url ? (
+                    <img src={asset.thumbnail_url} alt={name} className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <svg className="w-10 h-10 text-white/10 group-hover:text-white/20 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d={config.icon} />
+                    </svg>
+                  )}
 
                   {asset.status === 'generating' && (
                     <div className="absolute inset-0 bg-brand-950/60 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3">
@@ -112,41 +123,49 @@ export default function LibraryPage() {
                   )}
 
                   {/* Hover Overlay */}
-                  {asset.status === 'completed' && (
+                  {asset.status === 'completed' && asset.url && asset.url !== '#' && (
                     <div className="absolute inset-0 bg-brand-950/0 group-hover:bg-brand-950/30 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                      <button className="px-5 py-2.5 bg-white text-black font-heading font-bold text-xs tracking-wide rounded-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                      <a
+                        href={asset.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        download
+                        className="px-5 py-2.5 bg-white text-black font-heading font-bold text-xs tracking-wide rounded-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300"
+                      >
                         DOWNLOAD
-                      </button>
+                      </a>
                     </div>
                   )}
 
                   {/* Type Badge */}
-                  <div className="absolute top-3 left-3">
-                    <span className={`px-2 py-1 rounded-md text-[9px] font-heading font-bold tracking-wider ${config.bgGen} text-white/60 border border-white/5`}>
-                      {asset.format}
-                    </span>
-                  </div>
+                  {asset.metadata?.format && (
+                    <div className="absolute top-3 left-3">
+                      <span className={`px-2 py-1 rounded-md text-[9px] font-heading font-bold tracking-wider ${config.bgGen} text-white/60 border border-white/5`}>
+                        {asset.metadata.format}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Info */}
                 <div className="p-4">
                   <h3 className="font-heading font-semibold text-sm text-white truncate group-hover:text-brand-200 transition-colors">
-                    {asset.name}
+                    {name}
                   </h3>
                   <div className="flex items-center justify-between mt-2">
-                    <span className="text-brand-600 text-xs font-body truncate max-w-[60%]">{asset.project}</span>
-                    <span className="text-brand-700 text-[10px] font-heading">{asset.size}</span>
+                    <span className="text-brand-600 text-xs font-body truncate max-w-[60%]">{asset.project_name ?? '—'}</span>
+                    {asset.metadata?.size && <span className="text-brand-700 text-[10px] font-heading">{asset.metadata.size}</span>}
                   </div>
                   <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/[0.03]">
                     <span className={`text-[10px] font-heading tracking-wider flex items-center gap-1.5 ${
-                      asset.status === 'completed' ? 'text-green-500/80' : 'text-blue-400'
+                      asset.status === 'completed' ? 'text-green-500/80' : asset.status === 'failed' ? 'text-red-400' : 'text-blue-400'
                     }`}>
                       <div className={`w-1.5 h-1.5 rounded-full ${
-                        asset.status === 'completed' ? 'bg-green-500' : 'bg-blue-500 animate-pulse'
+                        asset.status === 'completed' ? 'bg-green-500' : asset.status === 'failed' ? 'bg-red-500' : 'bg-blue-500 animate-pulse'
                       }`} />
-                      {asset.status === 'completed' ? 'READY' : 'GENERATING'}
+                      {asset.status === 'completed' ? 'READY' : asset.status === 'failed' ? 'FAILED' : 'GENERATING'}
                     </span>
-                    <span className="text-brand-700 text-[10px] font-body">{asset.date}</span>
+                    <span className="text-brand-700 text-[10px] font-body">{timeAgo(asset.created_at)}</span>
                   </div>
                 </div>
               </div>
@@ -157,11 +176,17 @@ export default function LibraryPage() {
         <div className="text-center py-20">
           <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-brand-900/50 border border-white/5 flex items-center justify-center">
             <svg className="w-7 h-7 text-brand-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
-          <p className="text-brand-400 font-heading text-sm mb-1">No assets found</p>
-          <p className="text-brand-700 font-body text-xs">Try adjusting your filters or search query</p>
+          <p className="text-brand-400 font-heading text-sm mb-1">
+            {all.length === 0 ? 'No assets yet' : 'No assets found'}
+          </p>
+          <p className="text-brand-700 font-body text-xs">
+            {all.length === 0
+              ? 'Generated images, videos, and audio will land here once the Shooting stage runs.'
+              : 'Try adjusting your filters or search query'}
+          </p>
         </div>
       )}
     </div>

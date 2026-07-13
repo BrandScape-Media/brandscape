@@ -24,6 +24,8 @@ interface AuthContextType {
   signUpWithEmail: (email: string, password: string, name: string) => Promise<void>
   signInAsDemo: () => void
   signOut: () => Promise<void>
+  /** Re-fetches the profile row (e.g. after agency onboarding sets agency_id). */
+  refreshProfile: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -136,6 +138,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error
   }
 
+  const refreshProfile = async () => {
+    if (demoMode || !configured) return
+    const { data: { session: current } } = await getSupabase().auth.getSession()
+    await handleUser(current)
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -148,6 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUpWithEmail,
         signInAsDemo,
         signOut,
+        refreshProfile,
       }}
     >
       {children}

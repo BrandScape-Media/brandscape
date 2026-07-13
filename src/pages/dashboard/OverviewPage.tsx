@@ -1,28 +1,51 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { useAgency, useAssets, useProjects } from '../../hooks/useData'
+import { projectProgress, stageLabel } from './ProjectsPage'
+import { plans } from '../../data/plans'
+import { timeAgo, formatBytes } from '../../lib/format'
+import type { Project } from '../../types'
+
+interface ActivityItem {
+  action: string
+  project: string
+  at: string
+  type: 'success' | 'progress' | 'info'
+}
+
+function buildActivity(projects: Project[]): ActivityItem[] {
+  const items: ActivityItem[] = []
+  for (const p of projects) {
+    items.push({ action: 'Project created', project: p.name, at: p.created_at, type: 'info' })
+    for (const s of p.stages ?? []) {
+      if (s.status === 'completed' && s.completed_at && s.stage !== 'discovery') {
+        items.push({ action: `${stageLabel(s.stage)} stage completed`, project: p.name, at: s.completed_at, type: 'success' })
+      }
+      if (s.status === 'in_progress' && s.started_at) {
+        items.push({ action: `${stageLabel(s.stage)} in progress`, project: p.name, at: s.started_at, type: 'progress' })
+      }
+    }
+  }
+  return items.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 6)
+}
 
 export default function OverviewPage() {
   const { user } = useAuth()
+  const { data: projects, loading: projectsLoading } = useProjects()
+  const { data: agency } = useAgency()
+  const { data: assets } = useAssets()
+
+  const plan = plans.find((p) => p.tier === agency?.plan) ?? plans[0]
+  const projectCount = projects?.length ?? 0
+  const assetCount = assets?.length ?? 0
+  const recentProjects = (projects ?? []).slice(0, 3)
+  const activity = buildActivity(projects ?? [])
 
   const stats = [
-    { label: 'Active Projects', value: '3', change: '+1 this week', icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z' },
-    { label: 'Assets Generated', value: '47', change: 'This month', icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
-    { label: 'Revisions Used', value: '12/20', change: 'Professional plan', icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' },
-    { label: 'Storage Used', value: '2.4 GB', change: 'of 50 GB', icon: 'M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z' },
-  ]
-
-  const recentProjects = [
-    { name: 'Nike — Summer Campaign', client: 'Nike', stage: 'Ideation', status: 'in_progress' as const, updated: '2 hours ago', progress: 37 },
-    { name: 'Spotify — Brand Redesign', client: 'Spotify', stage: 'Research', status: 'completed' as const, updated: '1 day ago', progress: 62 },
-    { name: 'Local Coffee Co.', client: 'Local Coffee', stage: 'Discovery', status: 'pending' as const, updated: '3 days ago', progress: 12 },
-  ]
-
-  const activity = [
-    { action: 'Research stage completed', project: 'Spotify — Brand Redesign', time: '1 hour ago', type: 'success' as const },
-    { action: 'Ideation AI running', project: 'Nike — Summer Campaign', time: '2 hours ago', type: 'progress' as const },
-    { action: 'New project created', project: 'Local Coffee Co.', time: '3 days ago', type: 'info' as const },
-    { action: '3 assets generated', project: 'Nike — Summer Campaign', time: '5 hours ago', type: 'info' as const },
-    { action: 'Revision requested', project: 'Spotify — Brand Redesign', time: '1 day ago', type: 'warning' as const },
+    { label: 'Active Projects', value: projectsLoading ? '…' : String(projectCount), change: `of ${plan.projectsIncluded} on ${plan.name}`, icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z' },
+    { label: 'Assets Generated', value: String(assetCount), change: 'All time', icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
+    { label: 'Revisions Used', value: `${agency?.usage_revisions ?? 0}/${plan.revisionsIncluded}`, change: `${plan.name} plan`, icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' },
+    { label: 'Storage Used', value: formatBytes(agency?.usage_storage), change: 'Generated media', icon: 'M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z' },
   ]
 
   return (
@@ -109,29 +132,42 @@ export default function OverviewPage() {
               </Link>
             </div>
             <div className="bg-brand-900/30 border border-white/5 rounded-xl overflow-hidden">
-              {recentProjects.map((project, i) => (
-                <Link
-                  key={i}
-                  to={`/dashboard/projects/${i + 1}`}
-                  className={`flex items-center gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors group ${
-                    i > 0 ? 'border-t border-white/5' : ''
-                  }`}
-                >
-                  <StatusDot status={project.status} />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-heading text-sm text-white truncate group-hover:text-brand-200 transition-colors">{project.name}</p>
-                    <p className="text-brand-600 text-xs font-body">{project.client}</p>
-                  </div>
-                  <div className="hidden sm:flex items-center gap-2 w-24">
-                    <div className="flex-1 h-1 bg-brand-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-white/60 rounded-full" style={{ width: `${project.progress}%` }} />
-                    </div>
-                    <span className="text-brand-600 text-[10px] font-heading w-8 text-right">{project.progress}%</span>
-                  </div>
-                  <span className="hidden md:block text-brand-500 text-xs font-heading w-20">{project.stage}</span>
-                  <span className="text-brand-700 text-[10px] font-body w-20 text-right">{project.updated}</span>
-                </Link>
-              ))}
+              {recentProjects.length === 0 && !projectsLoading ? (
+                <div className="px-5 py-10 text-center">
+                  <p className="text-brand-500 text-sm font-heading mb-1">No projects yet</p>
+                  <p className="text-brand-700 text-xs font-body">
+                    <Link to="/dashboard/projects/new" className="underline hover:text-brand-400 transition-colors">Create your first project</Link> to start the pipeline.
+                  </p>
+                </div>
+              ) : (
+                recentProjects.map((project, i) => {
+                  const progress = projectProgress(project)
+                  const status = progress >= 100 ? 'completed' : progress > 0 ? 'in_progress' : 'pending'
+                  return (
+                    <Link
+                      key={project.id}
+                      to={`/dashboard/projects/${project.id}`}
+                      className={`flex items-center gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors group ${
+                        i > 0 ? 'border-t border-white/5' : ''
+                      }`}
+                    >
+                      <StatusDot status={status} />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-heading text-sm text-white truncate group-hover:text-brand-200 transition-colors">{project.name}</p>
+                        <p className="text-brand-600 text-xs font-body">{project.client_name ?? '—'}</p>
+                      </div>
+                      <div className="hidden sm:flex items-center gap-2 w-24">
+                        <div className="flex-1 h-1 bg-brand-800 rounded-full overflow-hidden">
+                          <div className="h-full bg-white/60 rounded-full" style={{ width: `${progress}%` }} />
+                        </div>
+                        <span className="text-brand-600 text-[10px] font-heading w-8 text-right">{progress}%</span>
+                      </div>
+                      <span className="hidden md:block text-brand-500 text-xs font-heading w-20">{stageLabel(project.current_stage)}</span>
+                      <span className="text-brand-700 text-[10px] font-body w-20 text-right">{timeAgo(project.updated_at)}</span>
+                    </Link>
+                  )
+                })
+              )}
             </div>
           </div>
         </div>
@@ -140,37 +176,40 @@ export default function OverviewPage() {
         <div>
           <h2 className="font-heading font-bold text-sm tracking-wide uppercase text-brand-400 mb-4">Activity</h2>
           <div className="bg-brand-900/30 border border-white/5 rounded-xl p-5">
-            <div className="space-y-0">
-              {activity.map((item, i) => (
-                <div key={i} className="relative pb-5 last:pb-0">
-                  {i < activity.length - 1 && (
-                    <div className="absolute left-1.5 top-3 bottom-0 w-px bg-white/5" />
-                  )}
-                  <div className="flex items-start gap-3">
-                    <div className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${
-                      item.type === 'success' ? 'bg-green-500' :
-                      item.type === 'progress' ? 'bg-blue-500 animate-pulse' :
-                      item.type === 'warning' ? 'bg-amber-500' :
-                      'bg-brand-600'
-                    }`} />
-                    <div className="min-w-0">
-                      <p className="text-brand-300 text-xs font-body leading-snug">{item.action}</p>
-                      <p className="text-brand-600 text-[10px] font-heading mt-0.5 truncate">{item.project}</p>
-                      <p className="text-brand-700 text-[10px] font-body mt-0.5">{item.time}</p>
+            {activity.length === 0 ? (
+              <p className="text-brand-700 text-xs font-body text-center py-6">Activity appears here as your pipeline runs.</p>
+            ) : (
+              <div className="space-y-0">
+                {activity.map((item, i) => (
+                  <div key={i} className="relative pb-5 last:pb-0">
+                    {i < activity.length - 1 && (
+                      <div className="absolute left-1.5 top-3 bottom-0 w-px bg-white/5" />
+                    )}
+                    <div className="flex items-start gap-3">
+                      <div className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${
+                        item.type === 'success' ? 'bg-green-500' :
+                        item.type === 'progress' ? 'bg-blue-500 animate-pulse' :
+                        'bg-brand-600'
+                      }`} />
+                      <div className="min-w-0">
+                        <p className="text-brand-300 text-xs font-body leading-snug">{item.action}</p>
+                        <p className="text-brand-600 text-[10px] font-heading mt-0.5 truncate">{item.project}</p>
+                        <p className="text-brand-700 text-[10px] font-body mt-0.5">{timeAgo(item.at)}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Usage Summary */}
           <div className="bg-brand-900/30 border border-white/5 rounded-xl p-5 mt-4">
             <h3 className="font-heading font-semibold text-xs text-brand-300 mb-4 tracking-wide">Monthly Usage</h3>
             <div className="space-y-4">
-              <UsageBar label="Generations" used={47} total={250} />
-              <UsageBar label="Revisions" used={12} total={20} />
-              <UsageBar label="Projects" used={3} total={15} />
+              <UsageBar label="Generations" used={agency?.usage_generations ?? 0} total={plan.generationsPerMonth} />
+              <UsageBar label="Revisions" used={agency?.usage_revisions ?? 0} total={plan.revisionsIncluded} />
+              <UsageBar label="Projects" used={projectCount} total={plan.projectsIncluded} />
             </div>
           </div>
         </div>
@@ -205,7 +244,7 @@ function StatusDot({ status }: { status: 'pending' | 'in_progress' | 'completed'
 }
 
 function UsageBar({ label, used, total }: { label: string; used: number; total: number }) {
-  const pct = Math.round((used / total) * 100)
+  const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0
   const isHigh = pct > 80
   return (
     <div>

@@ -12,9 +12,13 @@ export interface User {
 export interface Agency {
   id: string
   name: string
+  industry?: string | null
   plan: PlanTier
-  members: User[]
-  usage: UsageStats
+  trial_ends_at?: string | null
+  usage_generations: number
+  usage_revisions: number
+  usage_storage: number
+  billing_cycle_start?: string | null
   created_at: string
 }
 
@@ -46,19 +50,14 @@ export interface Client {
   id: string
   agency_id: string
   name: string
-  industry: string
-  brand_guidelines?: BrandGuidelines
+  industry?: string | null
+  website?: string | null
+  target_audience?: string | null
+  brand_guidelines?: Record<string, unknown> | null
   created_at: string
   updated_at: string
-}
-
-export interface BrandGuidelines {
-  voice_tone: string
-  visual_style: string
-  color_palette: string[]
-  logo_urls: string[]
-  do_and_dont: string
-  target_audience: string
+  /** aggregate from `projects(count)` */
+  project_count?: number
 }
 
 // ===== Projects & Workflow =====
@@ -72,43 +71,53 @@ export type WorkflowStage =
   | 'shooting'
   | 'editing'
 
+export type StageStatus = 'pending' | 'in_progress' | 'completed' | 'revision'
+
 export interface Project {
   id: string
   agency_id: string
   client_id: string
   name: string
   current_stage: WorkflowStage
-  stages: ProjectStage[]
-  discovery_data?: DiscoveryData
+  discovery_data?: DiscoveryData | null
   created_at: string
   updated_at: string
+  /** joined from clients(name) */
+  client_name?: string
+  /** joined from project_stages(*) */
+  stages?: ProjectStage[]
 }
 
 export interface ProjectStage {
+  id: string
+  project_id: string
   stage: WorkflowStage
-  status: 'pending' | 'in_progress' | 'completed' | 'revision'
-  content?: Record<string, unknown>
-  started_at?: string
-  completed_at?: string
+  status: StageStatus
+  content?: StageContentData | null
+  started_at?: string | null
+  completed_at?: string | null
+}
+
+/**
+ * Shape of project_stages.content. `text` is the agency-editable
+ * output; the backend will also write structured `sections` and, for
+ * shootplan, a redacted `prompt_summary` (never the raw prompts).
+ */
+export interface StageContentData {
+  text?: string
+  sections?: { title: string; items: { label: string; value?: string; tag?: string }[] }[]
+  prompt_summary?: string
+  [key: string]: unknown
 }
 
 export interface DiscoveryData {
   budget: string
   timeline: string
   goals: string
-  client_questionnaire: Record<string, string>
-  brand_guidelines_url?: string
   target_audience: string
-  competition: string[]
+  competition: string
+  brand_guidelines: string
   notes: string
-}
-
-// ===== Usage =====
-export interface UsageStats {
-  generationsThisMonth: number
-  revisionsThisMonth: number
-  activeProjects: number
-  storageUsed: number
 }
 
 // ===== Media =====
@@ -118,7 +127,10 @@ export interface MediaAsset {
   type: 'image' | 'video' | 'audio'
   status: 'pending' | 'generating' | 'completed' | 'failed'
   url: string
-  thumbnail_url?: string
-  metadata: Record<string, string>
-  generated_at: string
+  thumbnail_url?: string | null
+  metadata?: Record<string, string> | null
+  file_size?: number | null
+  created_at: string
+  /** joined from projects(name) */
+  project_name?: string
 }
