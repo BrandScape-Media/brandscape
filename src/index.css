@@ -92,6 +92,28 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1.1;
 }
 
+/* ===== Form controls on dark UI ===== */
+/* Native <select> popups render on a light background on Windows, so
+   options must not inherit the page's white text color. */
+select option {
+  background-color: #111111;
+  color: #FFFFFF;
+}
+
+/* Chrome/Edge autofill forces a light background under white text —
+   repaint it dark and keep the text visible. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: #FFFFFF;
+  -webkit-box-shadow: 0 0 0 1000px #141414 inset;
+  box-shadow: 0 0 0 1000px #141414 inset;
+  caret-color: #FFFFFF;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
 /* ===== Scrollbar ===== */
 ::-webkit-scrollbar {
   width: 6px;

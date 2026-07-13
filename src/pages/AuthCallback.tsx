@@ -1,18 +1,47 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getSupabase, isSupabaseConfigured } from '../lib/supabase/client'
 
 export default function AuthCallback() {
   const navigate = useNavigate()
-  const [status, setStatus] = useState('Processing...')
+  const [status, setStatus] = useState('Completing sign in…')
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      navigate('/dashboard')
-    }, 2000)
+    if (!isSupabaseConfigured()) {
+      navigate('/login', { replace: true })
+      return
+    }
 
-    setStatus('Authentication successful!')
+    let cancelled = false
 
-    return () => clearTimeout(timer)
+    // supabase-js parses the tokens from the callback URL asynchronously —
+    // poll for the session instead of redirecting on a blind timer.
+    const startedAt = Date.now()
+    const poll = window.setInterval(async () => {
+      try {
+        const { data: { session } } = await getSupabase().auth.getSession()
+        if (cancelled) return
+        if (session) {
+          window.clearInterval(poll)
+          setStatus('Signed in! Redirecting…')
+          navigate('/dashboard', { replace: true })
+        } else if (Date.now() - startedAt > 10_000) {
+          window.clearInterval(poll)
+          setStatus('Sign in did not complete. Redirecting…')
+          navigate('/login', { replace: true })
+        }
+      } catch {
+        if (!cancelled) {
+          window.clearInterval(poll)
+          navigate('/login', { replace: true })
+        }
+      }
+    }, 250)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(poll)
+    }
   }, [navigate])
 
   return (
