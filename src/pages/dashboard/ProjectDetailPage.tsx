@@ -73,7 +73,9 @@ export default function ProjectDetailPage() {
   const currentWorkflow = workflowStages[activeStage!]
   const currentStageRow = stagesByKey.get(currentWorkflow.stage)
   const currentStatus: StageStatus = currentStageRow?.status ?? 'pending'
-  const completedCount = (project.stages ?? []).filter((s) => s.status === 'completed').length
+  const completedCount = (project.stages ?? []).filter(
+    (s) => STAGE_ORDER.includes(s.stage) && s.status === 'completed',
+  ).length
   const progress = projectProgress(project)
 
   const statusDotColors: Record<StageStatus, string> = {
@@ -320,7 +322,7 @@ export default function ProjectDetailPage() {
                     </button>
                     <div className="flex-1" />
                     {STAGE_ORDER.indexOf(project.current_stage) === STAGE_ORDER.indexOf(currentWorkflow.stage) &&
-                      currentWorkflow.stage !== 'editing' && (
+                      STAGE_ORDER.indexOf(currentWorkflow.stage) < STAGE_ORDER.length - 1 && (
                       <button
                         onClick={handleNextStage}
                         className="px-5 py-2.5 bg-white text-black font-heading font-bold text-sm rounded-lg hover:bg-brand-200 transition-all flex items-center gap-2"
@@ -452,14 +454,28 @@ export default function ProjectDetailPage() {
 }
 
 const DISCOVERY_FIELDS: { key: keyof DiscoveryData; label: string }[] = [
-  { key: 'goals', label: 'Project Goals' },
+  { key: 'product', label: 'Product / Service Promoted' },
+  { key: 'objective', label: 'Campaign Objective' },
+  { key: 'platforms', label: 'Target Platforms' },
+  { key: 'deadline', label: 'Deadline' },
   { key: 'budget', label: 'Budget' },
-  { key: 'timeline', label: 'Timeline' },
+  { key: 'social_links', label: 'Client Social Pages' },
   { key: 'target_audience', label: 'Target Audience' },
   { key: 'competition', label: 'Key Competitors' },
+  { key: 'pain_points', label: 'Pain Points Solved' },
+  { key: 'usps', label: 'Unique Selling Points' },
+  { key: 'motto', label: 'Brand Motto' },
+  { key: 'messaging', label: 'Project Messaging' },
   { key: 'brand_guidelines', label: 'Brand Voice & Guidelines' },
   { key: 'notes', label: 'Notes' },
+  // legacy v1 fields
+  { key: 'goals', label: 'Project Goals' },
+  { key: 'timeline', label: 'Timeline' },
 ]
+
+function renderDiscoveryValue(value: string | string[]): string {
+  return Array.isArray(value) ? value.join('\n') : value
+}
 
 function StageBody({ stage, stageRow, discovery }: {
   stage: WorkflowStage
@@ -473,12 +489,18 @@ function StageBody({ stage, stageRow, discovery }: {
     if (!discovery) {
       return <EmptyStageNote title="No discovery data" note="This project was created without a discovery questionnaire." />
     }
+    const filled = DISCOVERY_FIELDS.filter(({ key }) => {
+      const v = discovery[key]
+      return Array.isArray(v) ? v.length > 0 : !!v
+    })
     return (
       <div className="space-y-2">
-        {DISCOVERY_FIELDS.filter(({ key }) => discovery[key]).map(({ key, label }) => (
+        {filled.map(({ key, label }) => (
           <div key={key} className="px-4 py-3 bg-brand-900/20 border border-white/[0.03] rounded-lg">
             <p className="text-brand-600 text-[10px] font-heading tracking-wider uppercase mb-1">{label}</p>
-            <p className="text-brand-300 text-sm font-body whitespace-pre-wrap">{discovery[key]}</p>
+            <p className="text-brand-300 text-sm font-body whitespace-pre-wrap">
+              {renderDiscoveryValue(discovery[key] as string | string[])}
+            </p>
           </div>
         ))}
       </div>

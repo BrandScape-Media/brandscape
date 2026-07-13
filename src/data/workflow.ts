@@ -1,5 +1,8 @@
 import type { WorkflowStage } from '../types'
 
+// Pipeline v2: Strategy is folded into Ideation; Editing is shelved
+// until the automated-edit milestone. The DB still accepts the old
+// stage names on historical rows — this list is what the product shows.
 export const workflowStages: {
   stage: WorkflowStage
   label: string
@@ -10,7 +13,7 @@ export const workflowStages: {
     stage: 'discovery',
     label: 'Discovery',
     icon: 'discovery',
-    description: 'Upload client info, brand guidelines, and project requirements.',
+    description: 'Client info, brand kit, product details, and campaign brief.',
   },
   {
     stage: 'research',
@@ -22,13 +25,7 @@ export const workflowStages: {
     stage: 'ideation',
     label: 'Ideation',
     icon: 'ideation',
-    description: 'AI generates concepts, storylines, and A/B testing angles.',
-  },
-  {
-    stage: 'strategy',
-    label: 'Strategy',
-    icon: 'strategy',
-    description: 'Brand-aligned creative brief with KPIs and conversion mapping.',
+    description: 'Concepts, hooks, and storylines wrapped in a brand-aligned creative strategy.',
   },
   {
     stage: 'scripts',
@@ -40,18 +37,12 @@ export const workflowStages: {
     stage: 'shootplan',
     label: 'Shoot Plan',
     icon: 'shootplan',
-    description: 'Scene-by-scene breakdown with A-roll and B-roll prompts.',
+    description: 'Scene-by-scene breakdown with A-roll and B-roll planning.',
   },
   {
     stage: 'shooting',
-    label: 'Shooting',
+    label: 'Raws',
     icon: 'shooting',
-    description: 'AI generates images and video clips via ComfyUI on GPU.',
-  },
-  {
-    stage: 'editing',
-    label: 'Editing',
-    icon: 'editing',
-    description: 'Automated assembly with music, voiceover, and effects.',
+    description: 'AI-generated raw images and video clips, ready to download.',
   },
 ]

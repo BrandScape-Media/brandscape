@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import * as api from '../lib/api'
-import { demoAgency, demoAssets, demoClients, demoProjects } from '../data/demo'
-import type { Agency, Client, MediaAsset, Project } from '../types'
+import { demoAgency, demoAssets, demoClientAssets, demoClients, demoProjects } from '../data/demo'
+import type { Agency, Client, ClientAsset, MediaAsset, Project } from '../types'
 
 interface AsyncState<T> {
   data: T | null
@@ -79,4 +79,8 @@ export function useAgency(): AsyncState<Agency | null> {
 
 export function useAssets(): AsyncState<MediaAsset[]> {
   return useAsyncData(api.listAssets, demoAssets)
+}
+
+export function useClientAssets(): AsyncState<ClientAsset[]> {
+  return useAsyncData(api.listClientAssets, demoClientAssets)
 }

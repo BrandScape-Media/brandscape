@@ -4,8 +4,11 @@ import { timeAgo, formatDate } from '../../lib/format'
 import { workflowStages } from '../../data/workflow'
 import type { Project, WorkflowStage } from '../../types'
 
+const VISIBLE_STAGES = new Set(workflowStages.map((s) => s.stage))
+
 export function projectProgress(project: Project): number {
-  const stages = project.stages ?? []
+  // ignore rows from retired pipeline stages on older projects
+  const stages = (project.stages ?? []).filter((s) => VISIBLE_STAGES.has(s.stage))
   if (stages.length === 0) return 0
   const score = stages.reduce((acc, s) => acc + (s.status === 'completed' ? 1 : s.status === 'in_progress' ? 0.5 : 0), 0)
   return Math.round((score / stages.length) * 100)

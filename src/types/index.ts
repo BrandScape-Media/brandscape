@@ -111,13 +111,51 @@ export interface StageContentData {
 }
 
 export interface DiscoveryData {
-  budget: string
-  timeline: string
-  goals: string
-  target_audience: string
-  competition: string
-  brand_guidelines: string
-  notes: string
+  /** what we're promoting for the client */
+  product?: string
+  /** campaign objective (awareness, engagement, conversions, …) */
+  objective?: string
+  /** target platforms/formats (TikTok, Instagram Reels, …) */
+  platforms?: string[]
+  /** client's social pages, fed to Research */
+  social_links?: string[]
+  /** optional single value — some clients don't share it */
+  budget?: string
+  /** ISO date */
+  deadline?: string
+  target_audience?: string
+  competition?: string
+  pain_points?: string
+  /** unique selling propositions, up to 5 */
+  usps?: string[]
+  motto?: string
+  /** specific messaging the agency wants used */
+  messaging?: string
+  brand_guidelines?: string
+  notes?: string
+  /** legacy v1 fields (older projects) */
+  goals?: string
+  timeline?: string
+}
+
+// ===== Uploaded brand assets =====
+export type ClientAssetKind = 'logo' | 'product_image' | 'font' | 'reference' | 'other'
+
+export interface ClientAsset {
+  id: string
+  agency_id: string
+  client_id: string
+  kind: ClientAssetKind
+  name: string
+  storage_path: string
+  mime_type?: string | null
+  file_size?: number | null
+  uploaded_by?: string | null
+  created_at: string
+  /** joined from clients(name) */
+  client_name?: string
+  /** short-lived signed URL for preview/download */
+  signed_url?: string
 }
 
 // ===== Media =====

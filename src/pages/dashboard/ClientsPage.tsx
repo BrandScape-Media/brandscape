@@ -158,14 +158,23 @@ function ClientModal({ client, onSave, onClose }: {
   onSave: (input: ClientInput) => Promise<void>
   onClose: () => void
 }) {
+  const kit = (client?.brand_guidelines ?? {}) as { colors?: string[]; motto?: string }
   const [form, setForm] = useState<ClientInput>({
     name: client?.name ?? '',
     industry: client?.industry ?? '',
     website: client?.website ?? '',
     target_audience: client?.target_audience ?? '',
   })
+  const [colors, setColors] = useState((kit.colors ?? []).join(', '))
+  const [motto, setMotto] = useState(kit.motto ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const parsedColors = colors
+    .split(/[,\s]+/)
+    .map((c) => c.trim())
+    .filter((c) => /^#?[0-9a-fA-F]{3,8}$/.test(c))
+    .map((c) => (c.startsWith('#') ? c : `#${c}`))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -173,7 +182,11 @@ function ClientModal({ client, onSave, onClose }: {
     setSaving(true)
     setError(null)
     try {
-      await onSave({ ...form, name: form.name.trim() })
+      await onSave({
+        ...form,
+        name: form.name.trim(),
+        brand_guidelines: { ...(client?.brand_guidelines ?? {}), colors: parsedColors, motto: motto.trim() },
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save the client.')
       setSaving(false)
@@ -228,6 +241,38 @@ function ClientModal({ client, onSave, onClose }: {
               placeholder="Who is this brand talking to?"
             />
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-heading text-brand-400 mb-2">Brand Colors <span className="text-brand-700">(hex, comma-separated)</span></label>
+              <input
+                type="text"
+                value={colors}
+                onChange={(e) => setColors(e.target.value)}
+                className="w-full px-4 py-3 bg-brand-900 border border-white/10 rounded-lg text-white font-body text-sm placeholder:text-brand-700 focus:outline-none focus:border-white/30 transition-colors"
+                placeholder="#FF5733, #1A1A2E"
+              />
+              {parsedColors.length > 0 && (
+                <div className="flex items-center gap-1.5 mt-2">
+                  {parsedColors.map((c, i) => (
+                    <span key={i} title={c} className="w-5 h-5 rounded-md border border-white/15" style={{ backgroundColor: c }} />
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-heading text-brand-400 mb-2">Brand Motto</label>
+              <input
+                type="text"
+                value={motto}
+                onChange={(e) => setMotto(e.target.value)}
+                className="w-full px-4 py-3 bg-brand-900 border border-white/10 rounded-lg text-white font-body text-sm placeholder:text-brand-700 focus:outline-none focus:border-white/30 transition-colors"
+                placeholder='e.g., "Think Different"'
+              />
+            </div>
+          </div>
+          <p className="text-brand-700 text-[11px] font-body">
+            Logo, product images, and font files are uploaded in Media Library → Uploads.
+          </p>
 
           {error && (
             <p className="text-red-400 text-xs font-body bg-red-500/5 border border-red-500/15 rounded-lg px-4 py-3">{error}</p>

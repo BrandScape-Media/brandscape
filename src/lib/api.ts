@@ -2,6 +2,8 @@ import { getSupabase } from './supabase/client'
 import type {
   Agency,
   Client,
+  ClientAsset,
+  ClientAssetKind,
   DiscoveryData,
   MediaAsset,
   Project,
@@ -61,6 +63,8 @@ export interface ClientInput {
   industry?: string
   website?: string
   target_audience?: string
+  /** brand kit details: { colors: string[], motto: string, fonts: string[] } */
+  brand_guidelines?: Record<string, unknown>
 }
 
 export async function createClient(agencyId: string, input: ClientInput): Promise<Client> {
@@ -164,6 +168,79 @@ export async function updateStage(
     .update(patch)
     .eq('project_id', projectId)
     .eq('stage', stage)
+  if (error) throw error
+}
+
+// ===== Uploaded brand assets (storage + client_assets metadata) =====
+
+const BRAND_BUCKET = 'brand-assets'
+
+export async function listClientAssets(): Promise<ClientAsset[]> {
+  const supabase = getSupabase()
+  const { data, error } = await supabase
+    .from('client_assets')
+    .select('*, clients(name)')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+
+  const assets: ClientAsset[] = (data ?? []).map((row) => {
+    const { clients, ...rest } = row
+    return { ...rest, client_name: clients?.name }
+  })
+
+  // short-lived signed URLs for preview/download (private bucket)
+  if (assets.length > 0) {
+    const { data: signed } = await supabase.storage
+      .from(BRAND_BUCKET)
+      .createSignedUrls(assets.map((a) => a.storage_path), 3600)
+    signed?.forEach((s, i) => {
+      if (s.signedUrl) assets[i].signed_url = s.signedUrl
+    })
+  }
+  return assets
+}
+
+export async function uploadClientAsset(
+  agencyId: string,
+  clientId: string,
+  kind: ClientAssetKind,
+  file: File,
+): Promise<ClientAsset> {
+  const supabase = getSupabase()
+  const safeName = file.name.replace(/[^\w.\-()\s]/g, '_')
+  const storagePath = `${agencyId}/${clientId}/${Date.now()}-${safeName}`
+
+  const { error: uploadError } = await supabase.storage
+    .from(BRAND_BUCKET)
+    .upload(storagePath, file, { contentType: file.type || undefined, upsert: false })
+  if (uploadError) throw uploadError
+
+  const { data, error } = await supabase
+    .from('client_assets')
+    .insert({
+      agency_id: agencyId,
+      client_id: clientId,
+      kind,
+      name: file.name,
+      storage_path: storagePath,
+      mime_type: file.type || null,
+      file_size: file.size,
+    })
+    .select()
+    .single()
+  if (error) {
+    // don't leave an orphan file behind if the metadata insert failed
+    await supabase.storage.from(BRAND_BUCKET).remove([storagePath]).catch(() => undefined)
+    throw error
+  }
+  return data
+}
+
+export async function deleteClientAsset(asset: Pick<ClientAsset, 'id' | 'storage_path'>): Promise<void> {
+  const supabase = getSupabase()
+  const { error: storageError } = await supabase.storage.from(BRAND_BUCKET).remove([asset.storage_path])
+  if (storageError) throw storageError
+  const { error } = await supabase.from('client_assets').delete().eq('id', asset.id)
   if (error) throw error
 }
 

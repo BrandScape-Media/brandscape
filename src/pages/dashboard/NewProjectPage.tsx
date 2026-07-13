@@ -4,6 +4,21 @@ import { useAuth } from '../../context/AuthContext'
 import { useClients } from '../../hooks/useData'
 import { createProject } from '../../lib/api'
 
+const OBJECTIVES = [
+  'Brand awareness',
+  'Engagement & community',
+  'Conversions / sales',
+  'Lead generation',
+  'App installs',
+  'Product launch',
+  'UGC-style content',
+]
+
+const PLATFORMS = ['TikTok', 'Instagram Reels', 'YouTube Shorts', 'Facebook', 'LinkedIn', 'X / Twitter']
+
+const inputCls =
+  'w-full px-4 py-3 bg-brand-900 border border-white/10 rounded-lg text-white font-body text-sm placeholder:text-brand-700 focus:outline-none focus:border-white/30 transition-colors'
+
 export default function NewProjectPage() {
   const navigate = useNavigate()
   const { user, demoMode } = useAuth()
@@ -14,17 +29,39 @@ export default function NewProjectPage() {
   const [formData, setFormData] = useState({
     projectName: '',
     clientId: '',
+    product: '',
+    objective: '',
+    platforms: [] as string[],
     budget: '',
-    timeline: '',
-    goals: '',
+    deadline: '',
+    socialLinks: '',
     targetAudience: '',
     competition: '',
+    painPoints: '',
+    usps: ['', '', '', '', ''],
+    motto: '',
+    messaging: '',
     brandGuidelines: '',
     notes: '',
   })
 
-  const updateField = (field: string, value: string) => {
+  const updateField = (field: string, value: string | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const updateUsp = (i: number, value: string) => {
+    setFormData((prev) => {
+      const usps = [...prev.usps]
+      usps[i] = value
+      return { ...prev, usps }
+    })
+  }
+
+  const togglePlatform = (p: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      platforms: prev.platforms.includes(p) ? prev.platforms.filter((x) => x !== p) : [...prev.platforms, p],
+    }))
   }
 
   const handleNext = () => setStep((s) => Math.min(s + 1, 3))
@@ -42,11 +79,18 @@ export default function NewProjectPage() {
         name: formData.projectName.trim(),
         client_id: formData.clientId,
         discovery_data: {
-          budget: formData.budget,
-          timeline: formData.timeline,
-          goals: formData.goals,
+          product: formData.product,
+          objective: formData.objective,
+          platforms: formData.platforms,
+          social_links: formData.socialLinks.split('\n').map((s) => s.trim()).filter(Boolean),
+          budget: formData.budget || undefined,
+          deadline: formData.deadline || undefined,
           target_audience: formData.targetAudience,
           competition: formData.competition,
+          pain_points: formData.painPoints,
+          usps: formData.usps.map((u) => u.trim()).filter(Boolean),
+          motto: formData.motto,
+          messaging: formData.messaging,
           brand_guidelines: formData.brandGuidelines,
           notes: formData.notes,
         },
@@ -69,7 +113,7 @@ export default function NewProjectPage() {
         </button>
         <h1 className="font-heading font-bold text-2xl">New Project</h1>
         <p className="text-brand-500 text-sm font-body mt-1">
-          Fill in the discovery details to kick off the AI pipeline.
+          Fill in the campaign brief to kick off the AI pipeline.
         </p>
       </div>
 
@@ -91,39 +135,35 @@ export default function NewProjectPage() {
             <span className={`text-sm font-heading hidden sm:inline ${
               s === step ? 'text-white' : 'text-brand-600'
             }`}>
-              {s === 1 ? 'Basics' : s === 2 ? 'Client Info' : 'Brand Details'}
+              {s === 1 ? 'Campaign' : s === 2 ? 'Audience & Research' : 'Brand & Messaging'}
             </span>
             {s < 3 && <div className="w-8 h-px bg-brand-800 hidden sm:block" />}
           </div>
         ))}
       </div>
 
-      {/* Step 1: Basics */}
+      {/* Step 1: Campaign */}
       {step === 1 && (
         <div className="bg-brand-900/30 border border-white/5 rounded-xl p-6 space-y-5">
-          <h2 className="font-heading font-bold text-lg">Project Basics</h2>
+          <h2 className="font-heading font-bold text-lg">Campaign Basics</h2>
 
           <div>
-            <label className="block text-sm font-heading text-brand-400 mb-2">
-              Project Name *
-            </label>
+            <label className="block text-sm font-heading text-brand-400 mb-2">Project Name *</label>
             <input
               type="text"
               value={formData.projectName}
               onChange={(e) => updateField('projectName', e.target.value)}
-              className="w-full px-4 py-3 bg-brand-900 border border-white/10 rounded-lg text-white font-body text-sm placeholder:text-brand-700 focus:outline-none focus:border-white/30 transition-colors"
-              placeholder="e.g., Nike — Summer 2024 Campaign"
+              className={inputCls}
+              placeholder="e.g., Nike — Summer 2026 Campaign"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-heading text-brand-400 mb-2">
-              Client *
-            </label>
+            <label className="block text-sm font-heading text-brand-400 mb-2">Client *</label>
             <select
               value={formData.clientId}
               onChange={(e) => updateField('clientId', e.target.value)}
-              className="w-full px-4 py-3 bg-brand-900 border border-white/10 rounded-lg text-white font-body text-sm focus:outline-none focus:border-white/30 transition-colors"
+              className={inputCls}
             >
               <option value="">{clientsLoading ? 'Loading clients…' : 'Select a client...'}</option>
               {(clients ?? []).map((c) => (
@@ -138,39 +178,80 @@ export default function NewProjectPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-heading text-brand-400 mb-2">
-              Budget Range
-            </label>
+            <label className="block text-sm font-heading text-brand-400 mb-2">Product / Service to Promote *</label>
+            <input
+              type="text"
+              value={formData.product}
+              onChange={(e) => updateField('product', e.target.value)}
+              className={inputCls}
+              placeholder="What are we promoting in this campaign?"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-heading text-brand-400 mb-2">Campaign Objective</label>
             <select
-              value={formData.budget}
-              onChange={(e) => updateField('budget', e.target.value)}
-              className="w-full px-4 py-3 bg-brand-900 border border-white/10 rounded-lg text-white font-body text-sm focus:outline-none focus:border-white/30 transition-colors"
+              value={formData.objective}
+              onChange={(e) => updateField('objective', e.target.value)}
+              className={inputCls}
             >
-              <option value="">Select budget range...</option>
-              <option value="small">&lt; $10,000</option>
-              <option value="medium">$10,000 - $50,000</option>
-              <option value="large">$50,000 - $100,000</option>
-              <option value="enterprise">$100,000+</option>
+              <option value="">Select an objective...</option>
+              {OBJECTIVES.map((o) => (
+                <option key={o} value={o}>{o}</option>
+              ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-heading text-brand-400 mb-2">
-              Timeline
-            </label>
-            <input
-              type="text"
-              value={formData.timeline}
-              onChange={(e) => updateField('timeline', e.target.value)}
-              className="w-full px-4 py-3 bg-brand-900 border border-white/10 rounded-lg text-white font-body text-sm placeholder:text-brand-700 focus:outline-none focus:border-white/30 transition-colors"
-              placeholder="e.g., 4 weeks, deadline July 30"
-            />
+            <label className="block text-sm font-heading text-brand-400 mb-2">Target Platforms</label>
+            <div className="flex flex-wrap gap-2">
+              {PLATFORMS.map((p) => {
+                const active = formData.platforms.includes(p)
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => togglePlatform(p)}
+                    className={`px-3.5 py-2 rounded-lg text-xs font-heading tracking-wide border transition-all ${
+                      active
+                        ? 'bg-white text-black border-white font-bold'
+                        : 'bg-brand-900 text-brand-400 border-white/10 hover:border-white/25'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-heading text-brand-400 mb-2">Deadline</label>
+              <input
+                type="date"
+                value={formData.deadline}
+                onChange={(e) => updateField('deadline', e.target.value)}
+                className={`${inputCls} [color-scheme:dark]`}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-heading text-brand-400 mb-2">Budget <span className="text-brand-700">(optional)</span></label>
+              <input
+                type="text"
+                value={formData.budget}
+                onChange={(e) => updateField('budget', e.target.value)}
+                className={inputCls}
+                placeholder="e.g., $25,000"
+              />
+              <p className="text-brand-700 text-[11px] font-body mt-1.5">Visible to your team — leave empty if the client prefers not to share.</p>
+            </div>
           </div>
 
           <div className="flex justify-end pt-4">
             <button
               onClick={handleNext}
-              disabled={!formData.projectName || !formData.clientId}
+              disabled={!formData.projectName.trim() || !formData.clientId || !formData.product.trim()}
               className="px-6 py-3 bg-white text-black font-heading font-bold text-sm tracking-wide rounded-lg hover:bg-brand-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               Continue
@@ -179,47 +260,52 @@ export default function NewProjectPage() {
         </div>
       )}
 
-      {/* Step 2: Client Info */}
+      {/* Step 2: Audience & Research */}
       {step === 2 && (
         <div className="bg-brand-900/30 border border-white/5 rounded-xl p-6 space-y-5">
-          <h2 className="font-heading font-bold text-lg">Client Information</h2>
+          <h2 className="font-heading font-bold text-lg">Audience &amp; Research Inputs</h2>
 
           <div>
-            <label className="block text-sm font-heading text-brand-400 mb-2">
-              Project Goals *
-            </label>
+            <label className="block text-sm font-heading text-brand-400 mb-2">Client&apos;s Social Media Pages</label>
             <textarea
-              value={formData.goals}
-              onChange={(e) => updateField('goals', e.target.value)}
-              rows={4}
-              className="w-full px-4 py-3 bg-brand-900 border border-white/10 rounded-lg text-white font-body text-sm placeholder:text-brand-700 focus:outline-none focus:border-white/30 transition-colors resize-none"
-              placeholder="What are the main objectives? Brand awareness, lead generation, product launch..."
+              value={formData.socialLinks}
+              onChange={(e) => updateField('socialLinks', e.target.value)}
+              rows={3}
+              className={`${inputCls} resize-none`}
+              placeholder={'One URL per line — used by the Research AI\nhttps://instagram.com/brand\nhttps://tiktok.com/@brand'}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-heading text-brand-400 mb-2">
-              Target Audience *
-            </label>
+            <label className="block text-sm font-heading text-brand-400 mb-2">Target Audience *</label>
             <textarea
               value={formData.targetAudience}
               onChange={(e) => updateField('targetAudience', e.target.value)}
               rows={3}
-              className="w-full px-4 py-3 bg-brand-900 border border-white/10 rounded-lg text-white font-body text-sm placeholder:text-brand-700 focus:outline-none focus:border-white/30 transition-colors resize-none"
-              placeholder="Describe the target demographic, psychographics, key behaviors..."
+              className={`${inputCls} resize-none`}
+              placeholder="Demographics, psychographics, platforms they live on, creators they follow…"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-heading text-brand-400 mb-2">
-              Key Competitors
-            </label>
+            <label className="block text-sm font-heading text-brand-400 mb-2">Key Competitors</label>
             <textarea
               value={formData.competition}
               onChange={(e) => updateField('competition', e.target.value)}
+              rows={2}
+              className={`${inputCls} resize-none`}
+              placeholder="Competitors, their social handles, notable campaigns…"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-heading text-brand-400 mb-2">Pain Points the Product Solves</label>
+            <textarea
+              value={formData.painPoints}
+              onChange={(e) => updateField('painPoints', e.target.value)}
               rows={3}
-              className="w-full px-4 py-3 bg-brand-900 border border-white/10 rounded-lg text-white font-body text-sm placeholder:text-brand-700 focus:outline-none focus:border-white/30 transition-colors resize-none"
-              placeholder="List competitors, their social handles, notable campaigns..."
+              className={`${inputCls} resize-none`}
+              placeholder="What frustrations does the audience have that this product fixes? These become hook angles."
             />
           </div>
 
@@ -232,7 +318,7 @@ export default function NewProjectPage() {
             </button>
             <button
               onClick={handleNext}
-              disabled={!formData.goals || !formData.targetAudience}
+              disabled={!formData.targetAudience.trim()}
               className="px-6 py-3 bg-white text-black font-heading font-bold text-sm tracking-wide rounded-lg hover:bg-brand-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               Continue
@@ -241,52 +327,101 @@ export default function NewProjectPage() {
         </div>
       )}
 
-      {/* Step 3: Brand Details */}
+      {/* Step 3: Brand & Messaging */}
       {step === 3 && (
         <div className="bg-brand-900/30 border border-white/5 rounded-xl p-6 space-y-5">
-          <h2 className="font-heading font-bold text-lg">Brand & Guidelines</h2>
+          <h2 className="font-heading font-bold text-lg">Brand &amp; Messaging</h2>
 
           <div>
-            <label className="block text-sm font-heading text-brand-400 mb-2">
-              Brand Voice & Guidelines
-            </label>
+            <label className="block text-sm font-heading text-brand-400 mb-2">Unique Selling Points <span className="text-brand-700">(up to 5)</span></label>
+            <div className="space-y-2">
+              {formData.usps.map((usp, i) => (
+                <input
+                  key={i}
+                  type="text"
+                  value={usp}
+                  onChange={(e) => updateUsp(i, e.target.value)}
+                  className={inputCls}
+                  placeholder={`USP ${i + 1}`}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-heading text-brand-400 mb-2">Brand Motto / Tagline</label>
+              <input
+                type="text"
+                value={formData.motto}
+                onChange={(e) => updateField('motto', e.target.value)}
+                className={inputCls}
+                placeholder='e.g., "Just Do It"'
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-heading text-brand-400 mb-2">Brand Voice &amp; Guidelines</label>
+              <input
+                type="text"
+                value={formData.brandGuidelines}
+                onChange={(e) => updateField('brandGuidelines', e.target.value)}
+                className={inputCls}
+                placeholder="Tone, style, do's and don'ts…"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-heading text-brand-400 mb-2">Specific Messaging for This Project</label>
             <textarea
-              value={formData.brandGuidelines}
-              onChange={(e) => updateField('brandGuidelines', e.target.value)}
-              rows={4}
-              className="w-full px-4 py-3 bg-brand-900 border border-white/10 rounded-lg text-white font-body text-sm placeholder:text-brand-700 focus:outline-none focus:border-white/30 transition-colors resize-none"
-              placeholder="Describe the brand voice, tone, visual style preferences, any do&apos;s and don&apos;ts..."
+              value={formData.messaging}
+              onChange={(e) => updateField('messaging', e.target.value)}
+              rows={3}
+              className={`${inputCls} resize-none`}
+              placeholder="Angles, claims, or phrases the campaign must use (or avoid)…"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-heading text-brand-400 mb-2">
-              Additional Notes
-            </label>
+            <label className="block text-sm font-heading text-brand-400 mb-2">Additional Notes</label>
             <textarea
               value={formData.notes}
               onChange={(e) => updateField('notes', e.target.value)}
-              rows={3}
-              className="w-full px-4 py-3 bg-brand-900 border border-white/10 rounded-lg text-white font-body text-sm placeholder:text-brand-700 focus:outline-none focus:border-white/30 transition-colors resize-none"
-              placeholder="Any other context, references, or special requirements..."
+              rows={2}
+              className={`${inputCls} resize-none`}
+              placeholder="Any other context, references, or special requirements…"
             />
           </div>
 
+          <p className="text-brand-600 text-xs font-body bg-brand-900/40 border border-white/5 rounded-lg px-4 py-3">
+            💡 Brand logo, product images, and fonts are uploaded per client in{' '}
+            <Link to="/dashboard/library" className="text-brand-400 hover:text-white underline transition-colors">Media Library → Uploads</Link>{' '}
+            — the generation pipeline picks them up from there.
+          </p>
+
           {/* Summary */}
           <div className="bg-brand-900 rounded-xl p-5 border border-white/5">
-            <h3 className="font-heading font-semibold text-sm text-brand-300 mb-3">Project Summary</h3>
+            <h3 className="font-heading font-semibold text-sm text-brand-300 mb-3">Campaign Summary</h3>
             <dl className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-brand-600">Project</dt>
-                <dd className="text-white font-heading">{formData.projectName || '—'}</dd>
+              <div className="flex justify-between gap-4">
+                <dt className="text-brand-600 flex-shrink-0">Project</dt>
+                <dd className="text-white font-heading text-right">{formData.projectName || '—'}</dd>
               </div>
-              <div className="flex justify-between">
-                <dt className="text-brand-600">Budget</dt>
-                <dd className="text-white font-heading">{formData.budget || '—'}</dd>
+              <div className="flex justify-between gap-4">
+                <dt className="text-brand-600 flex-shrink-0">Promoting</dt>
+                <dd className="text-white font-heading text-right">{formData.product || '—'}</dd>
               </div>
-              <div className="flex justify-between">
-                <dt className="text-brand-600">Timeline</dt>
-                <dd className="text-white font-heading">{formData.timeline || '—'}</dd>
+              <div className="flex justify-between gap-4">
+                <dt className="text-brand-600 flex-shrink-0">Objective</dt>
+                <dd className="text-white font-heading text-right">{formData.objective || '—'}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-brand-600 flex-shrink-0">Platforms</dt>
+                <dd className="text-white font-heading text-right">{formData.platforms.join(', ') || '—'}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-brand-600 flex-shrink-0">Deadline</dt>
+                <dd className="text-white font-heading text-right">{formData.deadline || '—'}</dd>
               </div>
             </dl>
           </div>

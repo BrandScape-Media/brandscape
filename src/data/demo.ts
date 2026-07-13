@@ -1,19 +1,11 @@
-import type { Agency, Client, MediaAsset, Project, ProjectStage, StageContentData, StageStatus, WorkflowStage } from '../types'
+import type { Agency, Client, ClientAsset, MediaAsset, Project, ProjectStage, StageContentData, StageStatus, WorkflowStage } from '../types'
+import { workflowStages } from './workflow'
 
 // Showcase dataset used when the app runs in demo mode (no Supabase
 // session). Shapes mirror the real database rows exactly so pages are
 // written once against real types.
 
-const STAGE_ORDER: WorkflowStage[] = [
-  'discovery',
-  'research',
-  'ideation',
-  'strategy',
-  'scripts',
-  'shootplan',
-  'shooting',
-  'editing',
-]
+const STAGE_ORDER: WorkflowStage[] = workflowStages.map((s) => s.stage)
 
 const hoursAgo = (h: number) => new Date(Date.now() - h * 3600_000).toISOString()
 const daysAgo = (d: number) => hoursAgo(d * 24)
@@ -87,12 +79,8 @@ const stageShowcase: Partial<Record<WorkflowStage, StageContentData>> = {
           { label: 'A/B Testing Angles', value: 'Headline, visual, CTA variations' },
         ],
       },
-    ],
-  },
-  strategy: {
-    sections: [
       {
-        title: 'Strategic Document',
+        title: 'Creative Strategy',
         items: [
           { label: 'Brand Voice', value: 'Confident, aspirational, accessible' },
           { label: 'Tone Guidelines', value: 'Bold headlines, warm storytelling' },
@@ -155,13 +143,20 @@ export const demoProjects: Project[] = [
     name: 'Nike — Summer Campaign',
     current_stage: 'ideation',
     discovery_data: {
-      budget: '$50,000 - $100,000',
-      timeline: '4 weeks',
-      goals: 'Launch the summer collection with high-energy short-form video across TikTok and Instagram Reels.',
+      product: 'Summer 2026 athleisure collection',
+      objective: 'Brand awareness',
+      platforms: ['TikTok', 'Instagram Reels'],
+      social_links: ['https://instagram.com/nike', 'https://tiktok.com/@nike'],
+      budget: '$75,000',
+      deadline: daysAgo(-14).slice(0, 10),
       target_audience: 'Gen Z and millennial athletes, athleisure-first, style-conscious.',
       competition: 'Adidas, Puma, Under Armour',
+      pain_points: 'Athleisure that looks good but performs poorly; sustainability guilt.',
+      usps: ['Recycled performance fabric', 'Runway-to-track styling', 'Athlete-tested comfort'],
+      motto: 'Just Do It',
+      messaging: 'Sustainability angle is a priority this season.',
       brand_guidelines: 'Confident, aspirational, accessible. Bold headlines, warm storytelling.',
-      notes: 'Sustainability angle is a priority this season.',
+      notes: '',
     },
     stages: makeStages('demo-p1', 1, 2),
     created_at: daysAgo(28),
@@ -175,15 +170,14 @@ export const demoProjects: Project[] = [
     name: 'Spotify — Brand Redesign',
     current_stage: 'scripts',
     discovery_data: {
-      budget: '$10,000 - $50,000',
-      timeline: '6 weeks',
-      goals: 'Refresh social presence around podcast discovery.',
+      product: 'Podcast discovery feature',
+      objective: 'Engagement',
+      platforms: ['Instagram Reels', 'YouTube Shorts'],
       target_audience: 'Music and podcast listeners, 16–35.',
       competition: 'Apple Music, YouTube Music',
       brand_guidelines: 'Playful, culture-forward, colorful.',
-      notes: '',
     },
-    stages: makeStages('demo-p2', 3, 4),
+    stages: makeStages('demo-p2', 2, 3),
     created_at: daysAgo(33),
     updated_at: daysAgo(1),
   },
@@ -195,13 +189,13 @@ export const demoProjects: Project[] = [
     name: 'Local Coffee Co. — Launch',
     current_stage: 'research',
     discovery_data: {
-      budget: '< $10,000',
-      timeline: '3 weeks',
-      goals: 'Local awareness for the new roastery opening.',
+      product: 'New roastery opening',
+      objective: 'Local awareness',
+      platforms: ['Instagram Reels', 'TikTok'],
+      budget: '$8,000',
       target_audience: 'Urban professionals within 5 miles.',
       competition: 'Starbucks, local independents',
       brand_guidelines: 'Warm, artisanal, community-first.',
-      notes: '',
     },
     stages: makeStages('demo-p3', 0, 1),
     created_at: daysAgo(23),
@@ -213,12 +207,20 @@ export const demoProjects: Project[] = [
     client_id: 'demo-c1',
     client_name: 'Nike',
     name: 'Adidas — Holiday Ads',
-    current_stage: 'editing',
+    current_stage: 'shooting',
     discovery_data: null,
-    stages: makeStages('demo-p4', 6, 7),
+    stages: makeStages('demo-p4', 4, 5),
     created_at: daysAgo(46),
     updated_at: hoursAgo(5),
   },
+]
+
+export const demoClientAssets: ClientAsset[] = [
+  { id: 'demo-u1', agency_id: 'demo-agency-1', client_id: 'demo-c1', client_name: 'Nike', kind: 'logo', name: 'nike-swoosh-white.png', storage_path: 'demo/logo.png', mime_type: 'image/png', file_size: 48_200, created_at: daysAgo(12) },
+  { id: 'demo-u2', agency_id: 'demo-agency-1', client_id: 'demo-c1', client_name: 'Nike', kind: 'product_image', name: 'pegasus-41-hero.jpg', storage_path: 'demo/product1.jpg', mime_type: 'image/jpeg', file_size: 2_310_000, created_at: daysAgo(12) },
+  { id: 'demo-u3', agency_id: 'demo-agency-1', client_id: 'demo-c1', client_name: 'Nike', kind: 'font', name: 'Futura-Condensed.otf', storage_path: 'demo/font.otf', mime_type: 'font/otf', file_size: 184_000, created_at: daysAgo(11) },
+  { id: 'demo-u4', agency_id: 'demo-agency-1', client_id: 'demo-c2', client_name: 'Spotify', kind: 'logo', name: 'spotify-icon-green.svg', storage_path: 'demo/logo2.svg', mime_type: 'image/svg+xml', file_size: 9_400, created_at: daysAgo(8) },
+  { id: 'demo-u5', agency_id: 'demo-agency-1', client_id: 'demo-c3', client_name: 'Local Coffee Co.', kind: 'reference', name: 'store-interior-moodboard.jpg', storage_path: 'demo/ref.jpg', mime_type: 'image/jpeg', file_size: 1_120_000, created_at: daysAgo(5) },
 ]
 
 export const demoAssets: MediaAsset[] = [
