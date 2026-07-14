@@ -7,7 +7,6 @@ import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import DashboardLayout from './pages/DashboardLayout'
 import AuthCallback from './pages/AuthCallback'
-import { PrivacyPage, TermsPage } from './pages/LegalPage'
 import SharePage from './pages/SharePage'
 import OverviewPage from './pages/dashboard/OverviewPage'
 import ProjectsPage from './pages/dashboard/ProjectsPage'
@@ -47,8 +46,8 @@ function AppRouter() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
-          <Route path="/privacy" element={<PrivacyPage />} />
-          <Route path="/terms" element={<TermsPage />} />
+          {/* /privacy and /terms are static files in public/ (served with
+              a real 200 by GitHub Pages, unlike SPA routes) */}
 
           {/* Public client-facing share link (no auth) */}
           <Route path="/share/:token" element={<SharePage />} />
