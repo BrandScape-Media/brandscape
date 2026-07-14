@@ -5,6 +5,7 @@ import type {
   ClientAsset,
   ClientAssetKind,
   DiscoveryData,
+  Job,
   MediaAsset,
   Project,
   ProjectStage,
@@ -143,10 +144,24 @@ export async function createProject(
 
 export async function updateProject(
   projectId: string,
-  patch: { name?: string; current_stage?: WorkflowStage; discovery_data?: DiscoveryData },
+  patch: { name?: string; current_stage?: WorkflowStage; discovery_data?: DiscoveryData; archived?: boolean },
 ): Promise<void> {
   const { error } = await getSupabase().from('projects').update(patch).eq('id', projectId)
   if (error) throw error
+}
+
+/** Latest pipeline job for a stage — used to explain failed runs. */
+export async function getLatestStageJob(projectId: string, stage: WorkflowStage): Promise<Job | null> {
+  const { data, error } = await getSupabase()
+    .from('jobs')
+    .select('id, stage, type, status, error, created_at, started_at, finished_at')
+    .eq('project_id', projectId)
+    .eq('stage', stage)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw error
+  return data
 }
 
 export async function deleteProject(projectId: string): Promise<void> {

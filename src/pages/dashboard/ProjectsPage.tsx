@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useProjects } from '../../hooks/useData'
 import { timeAgo, formatDate } from '../../lib/format'
@@ -31,6 +32,10 @@ const STAGE_GRADIENTS: Record<WorkflowStage, string> = {
 
 export default function ProjectsPage() {
   const { data: projects, loading, error } = useProjects()
+  const [showArchived, setShowArchived] = useState(false)
+
+  const archivedCount = (projects ?? []).filter((p) => p.archived).length
+  const visible = (projects ?? []).filter((p) => (p.archived ?? false) === showArchived)
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl">
@@ -38,18 +43,36 @@ export default function ProjectsPage() {
         <div>
           <h1 className="font-heading font-bold text-2xl">Projects</h1>
           <p className="text-brand-500 text-sm font-body mt-1">
-            {loading ? 'Loading projects…' : `${projects?.length ?? 0} project${projects?.length === 1 ? '' : 's'} across your agency.`}
+            {loading
+              ? 'Loading projects…'
+              : showArchived
+                ? `${visible.length} archived project${visible.length === 1 ? '' : 's'}.`
+                : `${visible.length} active project${visible.length === 1 ? '' : 's'} across your agency.`}
           </p>
         </div>
-        <Link
-          to="/dashboard/projects/new"
-          className="group px-5 py-2.5 bg-white text-black font-heading font-bold text-sm tracking-wide rounded-lg hover:bg-brand-200 transition-all duration-300 flex items-center gap-2 justify-center"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-          </svg>
-          NEW PROJECT
-        </Link>
+        <div className="flex items-center gap-3">
+          {archivedCount > 0 && (
+            <button
+              onClick={() => setShowArchived((s) => !s)}
+              className={`px-4 py-2.5 border font-heading text-sm rounded-lg transition-all ${
+                showArchived
+                  ? 'border-white/40 text-white bg-white/5'
+                  : 'border-white/15 text-brand-400 hover:text-white hover:border-white/30'
+              }`}
+            >
+              {showArchived ? '← Active' : `Archived (${archivedCount})`}
+            </button>
+          )}
+          <Link
+            to="/dashboard/projects/new"
+            className="group px-5 py-2.5 bg-white text-black font-heading font-bold text-sm tracking-wide rounded-lg hover:bg-brand-200 transition-all duration-300 flex items-center gap-2 justify-center"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+            </svg>
+            NEW PROJECT
+          </Link>
+        </div>
       </div>
 
       {error && (
@@ -64,7 +87,7 @@ export default function ProjectsPage() {
             <div key={i} className="bg-brand-900/30 border border-white/5 rounded-xl h-48 animate-pulse" />
           ))}
         </div>
-      ) : !projects || projects.length === 0 ? (
+      ) : visible.length === 0 ? (
         <div className="text-center py-20 bg-brand-900/20 border border-white/5 rounded-xl">
           <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-brand-900/50 border border-white/5 flex items-center justify-center">
             <svg className="w-7 h-7 text-brand-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -82,7 +105,7 @@ export default function ProjectsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {projects.map((project) => {
+          {visible.map((project) => {
             const progress = projectProgress(project)
             return (
               <Link

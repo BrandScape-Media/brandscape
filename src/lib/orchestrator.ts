@@ -2,9 +2,11 @@ import { getSupabase } from './supabase/client'
 import type { WorkflowStage } from '../types'
 
 // Base URL of the orchestrator (Railway). Overridable per-deploy; falls
-// back to the production API domain.
-const API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, '')
-  ?? 'https://api.brandscape.media'
+// back to the production API domain. Guard against empty/whitespace env
+// values — `"" ?? fallback` keeps the empty string and turns every API
+// call into a relative URL against GitHub Pages (405).
+const rawApiUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim().replace(/\/+$/, '')
+const API_URL = rawApiUrl && rawApiUrl.startsWith('http') ? rawApiUrl : 'https://api.brandscape.media'
 
 async function authHeader(): Promise<Record<string, string>> {
   const { data: { session } } = await getSupabase().auth.getSession()

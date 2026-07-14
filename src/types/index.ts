@@ -81,6 +81,7 @@ export interface Project {
   name: string
   current_stage: WorkflowStage
   discovery_data?: DiscoveryData | null
+  archived?: boolean
   created_at: string
   updated_at: string
   /** joined from clients(name) */
@@ -157,6 +158,18 @@ export interface ClientAsset {
   client_name?: string
   /** short-lived signed URL for preview/download */
   signed_url?: string
+}
+
+// ===== Jobs (AI pipeline runs) =====
+export interface Job {
+  id: string
+  stage?: string | null
+  type: string
+  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'
+  error?: string | null
+  created_at: string
+  started_at?: string | null
+  finished_at?: string | null
 }
 
 // ===== Client share links & comments =====

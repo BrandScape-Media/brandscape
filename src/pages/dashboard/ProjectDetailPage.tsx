@@ -4,12 +4,14 @@ import { workflowStages } from '../../data/workflow'
 import WorkflowIcon from '../../components/WorkflowIcon'
 import { useAuth } from '../../context/AuthContext'
 import { useProject } from '../../hooks/useData'
-import { updateStage, updateProject } from '../../lib/api'
+import { updateStage, updateProject, deleteProject, getLatestStageJob } from '../../lib/api'
 import { runStage } from '../../lib/orchestrator'
 import { getSupabase, isSupabaseConfigured } from '../../lib/supabase/client'
+import { timeAgo } from '../../lib/format'
 import { projectProgress, stageLabel as stageLabelFor } from './ProjectsPage'
 import ShareManager from './ShareManager'
-import type { DiscoveryData, ProjectStage, StageStatus, WorkflowStage } from '../../types'
+import { ConfirmDialog } from './ClientsPage'
+import type { DiscoveryData, Job, ProjectStage, StageStatus, WorkflowStage } from '../../types'
 
 const STAGE_ORDER: WorkflowStage[] = workflowStages.map((s) => s.stage)
 const AI_RUNNABLE: WorkflowStage[] = ['research', 'ideation', 'scripts', 'shootplan']
@@ -17,7 +19,7 @@ const AI_RUNNABLE: WorkflowStage[] = ['research', 'ideation', 'scripts', 'shootp
 export default function ProjectDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { demoMode } = useAuth()
+  const { user, demoMode } = useAuth()
   const { data: project, loading, error, reload } = useProject(id)
 
   const [activeStage, setActiveStage] = useState<number | null>(null)
@@ -28,6 +30,9 @@ export default function ProjectDetailPage() {
   const [saving, setSaving] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [shareOpen, setShareOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [failedJob, setFailedJob] = useState<Job | null>(null)
 
   const stagesByKey = useMemo(() => {
     const map = new Map<WorkflowStage, ProjectStage>()
@@ -69,6 +74,20 @@ export default function ProjectDetailPage() {
       .subscribe()
     return () => { getSupabase().removeChannel(channel) }
   }, [demoMode, id, reload])
+
+  // When the selected stage is in the failed ("revision") state, pull the
+  // latest job so the user can see WHY it failed and retry.
+  const activeStageKey = activeStage !== null ? STAGE_ORDER[activeStage] : null
+  useEffect(() => {
+    if (demoMode || !project || !activeStageKey) { setFailedJob(null); return }
+    const row = project.stages?.find((s) => s.stage === activeStageKey)
+    if (row?.status !== 'revision') { setFailedJob(null); return }
+    let cancelled = false
+    getLatestStageJob(project.id, activeStageKey)
+      .then((j) => { if (!cancelled) setFailedJob(j?.status === 'failed' ? j : null) })
+      .catch(() => undefined)
+    return () => { cancelled = true }
+  }, [demoMode, project, activeStageKey])
 
   if (loading || (project && activeStage === null)) {
     return (
@@ -208,7 +227,12 @@ export default function ProjectDetailPage() {
             </svg>
           </div>
           <div>
-            <h1 className="font-heading font-bold text-xl">{project.name}</h1>
+            <div className="flex items-center gap-2.5">
+              <h1 className="font-heading font-bold text-xl">{project.name}</h1>
+              {project.archived && (
+                <span className="px-2 py-0.5 rounded bg-brand-800 text-brand-400 text-[10px] font-heading font-bold tracking-wider">ARCHIVED</span>
+              )}
+            </div>
             <div className="flex items-center gap-3 mt-1">
               <span className="text-brand-600 text-xs font-body">Client: {project.client_name ?? '—'}</span>
             </div>
@@ -233,8 +257,68 @@ export default function ProjectDetailPage() {
             </svg>
             Run AI
           </button>
+
+          {/* Overflow menu: archive / delete */}
+          <div className="relative">
+            <button
+              onClick={() => setMenuOpen((o) => !o)}
+              title="Project options"
+              className="px-3 py-2.5 border border-white/15 text-brand-300 hover:text-white font-heading text-sm rounded-lg hover:border-white/30 transition-all"
+            >
+              ⋯
+            </button>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
+                <div className="absolute right-0 top-full mt-2 z-40 w-48 bg-brand-950 border border-white/10 rounded-xl overflow-hidden shadow-xl">
+                  <button
+                    onClick={async () => {
+                      setMenuOpen(false)
+                      if (demoMode) { setNotice('Demo mode is read-only.'); return }
+                      try {
+                        await updateProject(project.id, { archived: !project.archived })
+                        reload()
+                      } catch (err) {
+                        setNotice(err instanceof Error ? err.message : 'Could not update the project.')
+                      }
+                    }}
+                    className="w-full text-left px-4 py-3 text-sm font-heading text-brand-300 hover:text-white hover:bg-white/5 transition-colors"
+                  >
+                    {project.archived ? 'Unarchive Project' : 'Archive Project'}
+                  </button>
+                  {(user?.role === 'owner' || user?.role === 'admin') && (
+                    <button
+                      onClick={() => { setMenuOpen(false); setConfirmDelete(true) }}
+                      className="w-full text-left px-4 py-3 text-sm font-heading text-red-400 hover:bg-red-500/10 transition-colors"
+                    >
+                      Delete Project…
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title={`Delete ${project.name}?`}
+          body="This permanently removes the project, all stage outputs, generated media records, and share links. This cannot be undone."
+          confirmLabel="Delete Project"
+          onConfirm={async () => {
+            if (demoMode) { setNotice('Demo mode is read-only.'); setConfirmDelete(false); return }
+            try {
+              await deleteProject(project.id)
+              navigate('/dashboard/projects')
+            } catch (err) {
+              setNotice(err instanceof Error ? err.message : 'Could not delete the project.')
+              setConfirmDelete(false)
+            }
+          }}
+          onClose={() => setConfirmDelete(false)}
+        />
+      )}
 
       {shareOpen && <ShareManager projectId={project.id} onClose={() => setShareOpen(false)} />}
 
@@ -388,6 +472,34 @@ export default function ProjectDetailPage() {
                       </button>
                     )}
                   </>
+                ) : currentStatus === 'revision' ? (
+                  <div className="w-full">
+                    <div className="mb-4 px-4 py-3 bg-red-500/5 border border-red-500/15 rounded-lg">
+                      <p className="text-red-400 text-[10px] font-heading font-bold tracking-wider mb-1.5">
+                        LAST AI RUN FAILED{failedJob?.finished_at ? ` · ${timeAgo(failedJob.finished_at)}` : ''}
+                      </p>
+                      <p className="text-brand-300 text-xs font-body leading-relaxed break-words">
+                        {failedJob?.error ?? 'No error details were recorded for this run.'}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        onClick={() => handleRunAI(currentWorkflow.stage)}
+                        className="px-5 py-2.5 bg-white text-black font-heading font-bold text-sm rounded-lg hover:bg-brand-200 transition-all flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Retry AI Run
+                      </button>
+                      <button
+                        onClick={() => setEditingText(currentStageRow?.content?.text ?? '')}
+                        className="px-4 py-2.5 border border-white/15 text-white font-heading text-sm rounded-lg hover:border-white/30 transition-all"
+                      >
+                        Write Manually
+                      </button>
+                    </div>
+                  </div>
                 ) : currentStatus === 'in_progress' ? (
                   <div className="flex flex-wrap items-center gap-3 w-full">
                     <button
