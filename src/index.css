@@ -114,6 +114,47 @@ select:-webkit-autofill {
   transition: background-color 9999s ease-in-out 0s;
 }
 
+/* ===== Metal logo (cursor-reactive) ===== */
+.metal-logo {
+  position: relative;
+  display: inline-block;
+  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform;
+}
+.metal-logo__base {
+  display: block;
+  filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.16));
+  transition: filter 0.4s ease;
+  animation: metal-float 6s ease-in-out infinite;
+}
+.metal-logo.is-active .metal-logo__base {
+  filter: drop-shadow(0 0 34px rgba(255, 255, 255, 0.5));
+}
+/* specular highlight, clipped to the logo silhouette, tracks the cursor */
+.metal-logo__sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at var(--mx, 50%) var(--my, 50%),
+    rgba(255, 255, 255, 0.95),
+    rgba(255, 255, 255, 0.12) 32%,
+    transparent 58%
+  );
+  -webkit-mask: var(--logo) center / contain no-repeat;
+  mask: var(--logo) center / contain no-repeat;
+  mix-blend-mode: screen;
+  opacity: calc(var(--pull, 0) * 0.9);
+  transition: opacity 0.3s ease;
+}
+@keyframes metal-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .metal-logo, .metal-logo__base { animation: none; transition: none; }
+}
+
 /* ===== Scrollbar ===== */
 ::-webkit-scrollbar {
   width: 6px;

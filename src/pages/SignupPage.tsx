@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { isSupabaseConfigured } from '../lib/supabase/client'
+import MetalLogo from '../components/MetalLogo'
 
 export default function SignupPage() {
   const [name, setName] = useState('')
@@ -53,7 +54,7 @@ export default function SignupPage() {
           />
         </div>
         <div className="relative z-10 flex flex-col justify-center px-16">
-          <img src="/logo-dark.png" alt="Brandscape" className="h-10 w-auto self-start mb-16" />
+          <MetalLogo heightClass="h-20" className="self-start mb-14" />
           <h2 className="font-heading font-black text-4xl tracking-tight mb-6 leading-tight">
             Start Creating
             <br />
@@ -88,7 +89,7 @@ export default function SignupPage() {
           {/* Mobile Logo */}
           <div className="lg:hidden text-center mb-8">
             <Link to="/" className="inline-block">
-              <img src="/logo-dark.png" alt="Brandscape" className="h-9 mx-auto" />
+              <img src="/logo-transparent.png" alt="Brandscape" className="h-20 w-auto mx-auto drop-shadow-[0_0_20px_rgba(255,255,255,0.18)]" />
             </Link>
           </div>
 

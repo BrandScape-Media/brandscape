@@ -5,11 +5,14 @@ import WorkflowIcon from '../../components/WorkflowIcon'
 import { useAuth } from '../../context/AuthContext'
 import { useProject } from '../../hooks/useData'
 import { updateStage, updateProject } from '../../lib/api'
-import { projectProgress } from './ProjectsPage'
+import { runStage } from '../../lib/orchestrator'
+import { getSupabase, isSupabaseConfigured } from '../../lib/supabase/client'
+import { projectProgress, stageLabel as stageLabelFor } from './ProjectsPage'
 import ShareManager from './ShareManager'
 import type { DiscoveryData, ProjectStage, StageStatus, WorkflowStage } from '../../types'
 
 const STAGE_ORDER: WorkflowStage[] = workflowStages.map((s) => s.stage)
+const AI_RUNNABLE: WorkflowStage[] = ['research', 'ideation', 'scripts', 'shootplan']
 
 export default function ProjectDetailPage() {
   const { id } = useParams()
@@ -50,6 +53,22 @@ export default function ProjectDetailPage() {
       },
     ])
   }, [demoMode])
+
+  // Live pipeline updates: the orchestrator writes stage results and job
+  // status server-side; refresh the project whenever they change.
+  useEffect(() => {
+    if (demoMode || !id || !isSupabaseConfigured()) return
+    const channel = getSupabase()
+      .channel(`project-${id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'project_stages', filter: `project_id=eq.${id}` }, () => reload())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs', filter: `project_id=eq.${id}` }, (payload) => {
+        const row = payload.new as { status?: string; error?: string; stage?: string }
+        if (row?.status === 'failed') setNotice(`AI run failed${row.stage ? ` (${row.stage})` : ''}: ${row.error ?? 'unknown error'}`)
+        reload()
+      })
+      .subscribe()
+    return () => { getSupabase().removeChannel(channel) }
+  }, [demoMode, id, reload])
 
   if (loading || (project && activeStage === null)) {
     return (
@@ -105,12 +124,32 @@ export default function ProjectDetailPage() {
     }, 700)
   }
 
-  const handleRunAI = () => {
-    setNotice(
-      demoMode
-        ? 'Demo mode: the AI pipeline is simulated here. Sign up to run it on real projects.'
-        : 'The AI engine (Runpod backend) is the next milestone — stage generation will run from here once it is connected.',
-    )
+  const handleRunAI = async (stage: WorkflowStage) => {
+    if (demoMode) {
+      setNotice('Demo mode: the AI pipeline is simulated here. Sign up to run it on real projects.')
+      return
+    }
+    if (!AI_RUNNABLE.includes(stage)) {
+      setNotice(`The ${stageLabelFor(stage)} stage isn't AI-generated — it's produced by the media pipeline.`)
+      return
+    }
+    setNotice(null)
+    // optimistic: flip to in_progress; Realtime will confirm/complete
+    try {
+      await updateStage(project.id, stage, { status: 'in_progress', started_at: new Date().toISOString() })
+      reload()
+    } catch {
+      /* non-fatal; the server sets status too */
+    }
+    try {
+      await runStage(project.id, stage)
+      setNotice(`AI is generating the ${stageLabelFor(stage)} stage — this updates live when it finishes.`)
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Could not start the AI run.')
+      // roll back the optimistic status
+      await updateStage(project.id, stage, { status: 'pending', started_at: null }).catch(() => undefined)
+      reload()
+    }
   }
 
   const handleSaveEdit = async () => {
@@ -186,7 +225,7 @@ export default function ProjectDetailPage() {
             Share
           </button>
           <button
-            onClick={handleRunAI}
+            onClick={() => handleRunAI(currentWorkflow.stage)}
             className="px-5 py-2.5 bg-white text-black font-heading font-bold text-sm rounded-lg hover:bg-brand-200 transition-all flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -327,7 +366,7 @@ export default function ProjectDetailPage() {
                       </button>
                     )}
                     <button
-                      onClick={handleRunAI}
+                      onClick={() => handleRunAI(currentWorkflow.stage)}
                       className="px-4 py-2.5 border border-white/15 text-white font-heading text-sm rounded-lg hover:border-white/30 hover:bg-white/[0.03] transition-all flex items-center gap-2"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -352,7 +391,7 @@ export default function ProjectDetailPage() {
                 ) : currentStatus === 'in_progress' ? (
                   <div className="flex flex-wrap items-center gap-3 w-full">
                     <button
-                      onClick={handleRunAI}
+                      onClick={() => handleRunAI(currentWorkflow.stage)}
                       className="px-5 py-2.5 bg-white text-black font-heading font-bold text-sm rounded-lg hover:bg-brand-200 transition-all flex items-center gap-2"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
