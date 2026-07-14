@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { useClients } from '../../hooks/useData'
+import { useAgency, useClients, useProjects } from '../../hooks/useData'
 import { createProject } from '../../lib/api'
+import { plans } from '../../data/plans'
 
 const OBJECTIVES = [
   'Brand awareness',
@@ -23,6 +24,11 @@ export default function NewProjectPage() {
   const navigate = useNavigate()
   const { user, demoMode } = useAuth()
   const { data: clients, loading: clientsLoading } = useClients()
+  const { data: projects } = useProjects()
+  const { data: agency } = useAgency()
+  const plan = plans.find((p) => p.tier === agency?.plan) ?? plans[0]
+  const activeCount = (projects ?? []).filter((p) => !p.archived).length
+  const atProjectLimit = !demoMode && activeCount >= plan.projectsIncluded
   const [step, setStep] = useState(1)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -70,6 +76,10 @@ export default function NewProjectPage() {
   const handleSubmit = async () => {
     if (demoMode) {
       setError('Demo mode is read-only — sign in with a real account to create projects.')
+      return
+    }
+    if (atProjectLimit) {
+      setError(`Your ${plan.name} plan allows ${plan.projectsIncluded} active projects. Archive a project or upgrade to create more.`)
       return
     }
     setSubmitting(true)
@@ -141,6 +151,15 @@ export default function NewProjectPage() {
           </div>
         ))}
       </div>
+
+      {atProjectLimit && (
+        <div className="mb-6 px-4 py-3 bg-amber-500/5 border border-amber-500/15 rounded-lg">
+          <p className="text-amber-400 text-xs font-body">
+            You&apos;re at your {plan.name} plan limit of {plan.projectsIncluded} active projects ({activeCount} in use).
+            Archive a finished project or <Link to="/pricing" className="underline hover:text-amber-300">upgrade your plan</Link> to start a new one.
+          </p>
+        </div>
+      )}
 
       {/* Step 1: Campaign */}
       {step === 1 && (

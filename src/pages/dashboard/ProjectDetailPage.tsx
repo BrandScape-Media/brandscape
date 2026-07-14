@@ -5,7 +5,7 @@ import WorkflowIcon from '../../components/WorkflowIcon'
 import { useAuth } from '../../context/AuthContext'
 import { useProject } from '../../hooks/useData'
 import { updateStage, updateProject, deleteProject, getLatestStageJob } from '../../lib/api'
-import { runStage } from '../../lib/orchestrator'
+import { runStage, reviseStage } from '../../lib/orchestrator'
 import { getSupabase, isSupabaseConfigured } from '../../lib/supabase/client'
 import { timeAgo } from '../../lib/format'
 import { projectProgress, stageLabel as stageLabelFor } from './ProjectsPage'
@@ -54,7 +54,7 @@ export default function ProjectDetailPage() {
         role: 'ai',
         text: demoMode
           ? "Hello! I'm working on this project's pipeline. Ask me anything about the analysis, or request changes to the output."
-          : 'The AI assistant comes online when the generation backend is connected. Your messages here will become revision requests for the current stage.',
+          : 'Tell me what to change about the selected stage — e.g. "make the hooks punchier" or "add a competitor angle" — and I\'ll rewrite its output.',
       },
     ])
   }, [demoMode])
@@ -125,22 +125,50 @@ export default function ProjectDetailPage() {
     revision: 'bg-amber-500',
   }
 
-  const handleChatSend = () => {
+  const handleChatSend = async () => {
     if (!chatInput.trim()) return
-    const text = chatInput
+    const text = chatInput.trim()
     setChatMessages((prev) => [...prev, { role: 'user', text }])
     setChatInput('')
-    setTimeout(() => {
+
+    if (demoMode) {
+      setTimeout(() => {
+        setChatMessages((prev) => [
+          ...prev,
+          { role: 'ai', text: "I've noted your feedback. Would you like me to regenerate this section with those changes, or adjust the direction first?" },
+        ])
+      }, 700)
+      return
+    }
+
+    const stage = currentWorkflow.stage
+    if (!AI_RUNNABLE.includes(stage)) {
       setChatMessages((prev) => [
         ...prev,
-        {
-          role: 'ai',
-          text: demoMode
-            ? "I've noted your feedback. Would you like me to regenerate this section with those changes, or adjust the direction first?"
-            : 'Noted — revision requests will be sent to the AI once the generation backend goes live.',
-        },
+        { role: 'ai', text: `The ${stageLabelFor(stage)} stage isn't AI-revisable — pick Research, Ideation, Scripts, or Shoot Plan.` },
       ])
-    }, 700)
+      return
+    }
+    if (!stagesByKey.get(stage)?.content) {
+      setChatMessages((prev) => [
+        ...prev,
+        { role: 'ai', text: `The ${stageLabelFor(stage)} stage has no output to revise yet — hit Run AI first.` },
+      ])
+      return
+    }
+
+    try {
+      await reviseStage(project.id, stage, text)
+      setChatMessages((prev) => [
+        ...prev,
+        { role: 'ai', text: `On it — revising the ${stageLabelFor(stage)} output now. The stage updates live when it's done.` },
+      ])
+    } catch (err) {
+      setChatMessages((prev) => [
+        ...prev,
+        { role: 'ai', text: err instanceof Error ? err.message : 'Could not send the revision request.' },
+      ])
+    }
   }
 
   const handleRunAI = async (stage: WorkflowStage) => {
@@ -501,6 +529,27 @@ export default function ProjectDetailPage() {
                     </div>
                   </div>
                 ) : currentStatus === 'in_progress' ? (
+                  <div className="flex flex-wrap items-center gap-3 w-full">
+                    <button
+                      onClick={() => handleRunAI(currentWorkflow.stage)}
+                      className="px-5 py-2.5 bg-white text-black font-heading font-bold text-sm rounded-lg hover:bg-brand-200 transition-all flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Run AI for {currentWorkflow.label}
+                    </button>
+                    <button
+                      onClick={() => setEditingText(currentStageRow?.content?.text ?? '')}
+                      className="px-4 py-2.5 border border-white/15 text-white font-heading text-sm rounded-lg hover:border-white/30 transition-all"
+                    >
+                      Write Manually
+                    </button>
+                  </div>
+                ) : AI_RUNNABLE.includes(currentWorkflow.stage) &&
+                  stagesByKey.get(STAGE_ORDER[STAGE_ORDER.indexOf(currentWorkflow.stage) - 1])?.status === 'completed' ? (
+                  // pending but ready: previous stage is done, so it can run
                   <div className="flex flex-wrap items-center gap-3 w-full">
                     <button
                       onClick={() => handleRunAI(currentWorkflow.stage)}
