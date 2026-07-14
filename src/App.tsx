@@ -7,6 +7,8 @@ import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import DashboardLayout from './pages/DashboardLayout'
 import AuthCallback from './pages/AuthCallback'
+import { PrivacyPage, TermsPage } from './pages/LegalPage'
+import SharePage from './pages/SharePage'
 import OverviewPage from './pages/dashboard/OverviewPage'
 import ProjectsPage from './pages/dashboard/ProjectsPage'
 import NewProjectPage from './pages/dashboard/NewProjectPage'
@@ -27,7 +29,7 @@ function LoadingScreen() {
   return (
     <div className="min-h-screen bg-brand-black flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
-        <img src="/logo-light.png" alt="Brandscape" className="h-12 animate-pulse" />
+        <img src="/logo-dark.png" alt="Brandscape" className="h-12 animate-pulse" />
         <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
       </div>
     </div>
@@ -45,6 +47,11 @@ function AppRouter() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+
+          {/* Public client-facing share link (no auth) */}
+          <Route path="/share/:token" element={<SharePage />} />
 
           {/* Protected routes */}
           <Route

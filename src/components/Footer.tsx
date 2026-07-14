@@ -7,7 +7,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand */}
           <div className="md:col-span-1">
-            <img src="/logo-light.png" alt="Brandscape" className="h-8 mb-4" />
+            <img src="/logo-dark.png" alt="Brandscape" className="h-8 mb-4" />
             <p className="text-brand-500 text-sm font-body leading-relaxed">
               End-to-end AI automation for marketing agencies. From discovery to delivery.
             </p>
@@ -47,8 +47,8 @@ export default function Footer() {
             <ul className="space-y-3">
               <li><Link to="/" className="text-brand-500 hover:text-white text-sm transition-colors">About</Link></li>
               <li><a href="mailto:hello@brandscape.media" className="text-brand-500 hover:text-white text-sm transition-colors">Contact</a></li>
-              <li><a href="#" className="text-brand-500 hover:text-white text-sm transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="text-brand-500 hover:text-white text-sm transition-colors">Terms of Service</a></li>
+              <li><Link to="/privacy" className="text-brand-500 hover:text-white text-sm transition-colors">Privacy Policy</Link></li>
+              <li><Link to="/terms" className="text-brand-500 hover:text-white text-sm transition-colors">Terms of Service</Link></li>
             </ul>
           </div>
         </div>

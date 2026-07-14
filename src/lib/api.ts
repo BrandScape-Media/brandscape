@@ -8,6 +8,9 @@ import type {
   MediaAsset,
   Project,
   ProjectStage,
+  ShareComment,
+  ShareLink,
+  SharedGallery,
   StageContentData,
   StageStatus,
   WorkflowStage,
@@ -241,6 +244,94 @@ export async function deleteClientAsset(asset: Pick<ClientAsset, 'id' | 'storage
   const { error: storageError } = await supabase.storage.from(BRAND_BUCKET).remove([asset.storage_path])
   if (storageError) throw storageError
   const { error } = await supabase.from('client_assets').delete().eq('id', asset.id)
+  if (error) throw error
+}
+
+// ===== Share links & comments =====
+
+// -- Agency side (authenticated) --
+
+export async function createShareLink(projectId: string, title?: string): Promise<string> {
+  const { data, error } = await getSupabase().rpc('create_share_link', {
+    p_project_id: projectId,
+    p_title: title ?? null,
+  })
+  if (error) throw error
+  return data as string
+}
+
+export async function listProjectShareLinks(projectId: string): Promise<ShareLink[]> {
+  const { data, error } = await getSupabase()
+    .from('share_links')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data ?? []
+}
+
+export async function setShareLinkActive(id: string, active: boolean): Promise<void> {
+  const { error } = await getSupabase().from('share_links').update({ is_active: active }).eq('id', id)
+  if (error) throw error
+}
+
+/** All comments across a project's share links, newest first (agency review). */
+export async function listProjectComments(projectId: string): Promise<ShareComment[]> {
+  const { data: links, error: linksError } = await getSupabase()
+    .from('share_links')
+    .select('id')
+    .eq('project_id', projectId)
+  if (linksError) throw linksError
+  const ids = (links ?? []).map((l) => l.id)
+  if (ids.length === 0) return []
+
+  const { data, error } = await getSupabase()
+    .from('share_comments')
+    .select('*')
+    .in('share_link_id', ids)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data ?? []
+}
+
+export async function setCommentResolved(id: string, resolved: boolean): Promise<void> {
+  const { error } = await getSupabase().from('share_comments').update({ resolved }).eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteComment(id: string): Promise<void> {
+  const { error } = await getSupabase().from('share_comments').delete().eq('id', id)
+  if (error) throw error
+}
+
+// -- Public side (no auth required; uses the anon key + token) --
+
+export async function getShare(token: string): Promise<SharedGallery | null> {
+  const { data, error } = await getSupabase().rpc('get_share', { p_token: token })
+  if (error) throw error
+  return (data as SharedGallery) ?? null
+}
+
+export async function listShareComments(token: string): Promise<ShareComment[]> {
+  const { data, error } = await getSupabase().rpc('list_share_comments', { p_token: token })
+  if (error) throw error
+  return (data as ShareComment[]) ?? []
+}
+
+export async function addShareComment(input: {
+  token: string
+  author: string
+  body: string
+  assetId?: string | null
+  timestampSeconds?: number | null
+}): Promise<void> {
+  const { error } = await getSupabase().rpc('add_share_comment', {
+    p_token: input.token,
+    p_author: input.author,
+    p_body: input.body,
+    p_asset_id: input.assetId ?? null,
+    p_timestamp_seconds: input.timestampSeconds ?? null,
+  })
   if (error) throw error
 }
 

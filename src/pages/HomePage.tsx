@@ -627,7 +627,7 @@ function FooterSection() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 lg:gap-12">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <img src="/logo-light.png" alt="Brandscape" className="h-8 mb-4" />
+            <img src="/logo-dark.png" alt="Brandscape" className="h-8 mb-4" />
             <p className="text-brand-600 text-xs font-body leading-relaxed">
               End-to-end AI automation for marketing agencies.
             </p>

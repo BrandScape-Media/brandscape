@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
-import { useAssets, useClientAssets, useClients } from '../../hooks/useData'
+import { useAgency, useAssets, useClientAssets, useClients } from '../../hooks/useData'
 import { useAuth } from '../../context/AuthContext'
 import { uploadClientAsset, deleteClientAsset } from '../../lib/api'
 import { timeAgo, formatBytes } from '../../lib/format'
+import { plans } from '../../data/plans'
 import { ConfirmDialog } from './ClientsPage'
 import type { ClientAsset, ClientAssetKind } from '../../types'
 
@@ -53,12 +54,19 @@ function UploadsTab() {
   const { user, demoMode } = useAuth()
   const { data: assets, loading, error, reload } = useClientAssets()
   const { data: clients } = useClients()
+  const { data: agency } = useAgency()
   const [clientFilter, setClientFilter] = useState('all')
   const [kindFilter, setKindFilter] = useState<'all' | ClientAssetKind>('all')
   const [search, setSearch] = useState('')
   const [uploadOpen, setUploadOpen] = useState(false)
   const [deleting, setDeleting] = useState<ClientAsset | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+
+  const plan = plans.find((p) => p.tier === agency?.plan) ?? plans[0]
+  const limitBytes = plan.storageGb * 1_000_000_000
+  const usedBytes = useMemo(() => (assets ?? []).reduce((sum, a) => sum + (a.file_size ?? 0), 0), [assets])
+  const usedPct = Math.min(100, Math.round((usedBytes / limitBytes) * 100))
+  const overQuota = usedBytes >= limitBytes
 
   const filtered = useMemo(() => {
     return (assets ?? []).filter((a) => {
@@ -138,9 +146,25 @@ function UploadsTab() {
         </div>
 
         <div className="flex-1" />
+
+        {/* Storage quota */}
+        <div className="w-full sm:w-48">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-brand-600 text-[10px] font-heading tracking-wider">STORAGE</span>
+            <span className={`text-[10px] font-heading ${overQuota ? 'text-red-400' : usedPct > 80 ? 'text-amber-500' : 'text-brand-500'}`}>
+              {formatBytes(usedBytes)} / {plan.storageGb} GB
+            </span>
+          </div>
+          <div className="h-1.5 bg-brand-800 rounded-full overflow-hidden">
+            <div className={`h-full rounded-full transition-all ${overQuota ? 'bg-red-500' : usedPct > 80 ? 'bg-amber-500' : 'bg-white/60'}`} style={{ width: `${usedPct}%` }} />
+          </div>
+        </div>
+
         <button
           onClick={() => setUploadOpen(true)}
-          className="px-5 py-2.5 bg-white text-black font-heading font-bold text-sm tracking-wide rounded-lg hover:bg-brand-200 transition-colors"
+          disabled={overQuota}
+          title={overQuota ? 'Storage quota reached — upgrade your plan or delete files' : undefined}
+          className="px-5 py-2.5 bg-white text-black font-heading font-bold text-sm tracking-wide rounded-lg hover:bg-brand-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         >
           + UPLOAD
         </button>
@@ -236,6 +260,7 @@ function UploadsTab() {
           onUploaded={() => { setUploadOpen(false); reload() }}
           demoMode={demoMode}
           agencyId={user?.agency_id}
+          remainingBytes={Math.max(0, limitBytes - usedBytes)}
         />
       )}
 
@@ -264,12 +289,13 @@ function FileGlyph({ mime, kind }: { mime?: string | null; kind: ClientAssetKind
   )
 }
 
-function UploadModal({ clients, onClose, onUploaded, demoMode, agencyId }: {
+function UploadModal({ clients, onClose, onUploaded, demoMode, agencyId, remainingBytes }: {
   clients: { id: string; name: string }[]
   onClose: () => void
   onUploaded: () => void
   demoMode: boolean
   agencyId?: string
+  remainingBytes: number
 }) {
   const [clientId, setClientId] = useState(clients[0]?.id ?? '')
   const [kind, setKind] = useState<ClientAssetKind>('product_image')
@@ -278,12 +304,18 @@ function UploadModal({ clients, onClose, onUploaded, demoMode, agencyId }: {
   const [progress, setProgress] = useState('')
   const [error, setError] = useState<string | null>(null)
 
+  const selectedBytes = files ? [...files].reduce((s, f) => s + f.size, 0) : 0
+
   const handleUpload = async () => {
     if (demoMode) {
       setError('Demo mode is read-only — sign in with a real account to upload.')
       return
     }
     if (!clientId || !files?.length || !agencyId) return
+    if (selectedBytes > remainingBytes) {
+      setError(`These files (${formatBytes(selectedBytes)}) exceed your remaining storage (${formatBytes(remainingBytes)}). Upgrade your plan or delete files.`)
+      return
+    }
     setBusy(true)
     setError(null)
     try {

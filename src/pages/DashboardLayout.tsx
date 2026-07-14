@@ -38,7 +38,7 @@ export default function DashboardLayout() {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="h-16 flex items-center px-6 border-b border-white/5">
-            <img src="/logo-light.png" alt="Brandscape" className="h-7" />
+            <img src="/logo-dark.png" alt="Brandscape" className="h-7" />
           </div>
 
           {/* Nav */}

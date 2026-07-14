@@ -10,6 +10,7 @@ export const plans: Plan[] = [
     revisionsIncluded: 5,
     projectsIncluded: 3,
     generationsPerMonth: 50,
+    storageGb: 25,
     prioritySupport: false,
     customWorkflows: false,
     features: [
@@ -34,6 +35,7 @@ export const plans: Plan[] = [
     revisionsIncluded: 20,
     projectsIncluded: 15,
     generationsPerMonth: 250,
+    storageGb: 200,
     prioritySupport: true,
     customWorkflows: false,
     isRecommended: true,
@@ -59,6 +61,7 @@ export const plans: Plan[] = [
     revisionsIncluded: 999,
     projectsIncluded: 999,
     generationsPerMonth: 999,
+    storageGb: 2000,
     prioritySupport: true,
     customWorkflows: true,
     features: [

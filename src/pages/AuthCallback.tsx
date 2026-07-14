@@ -47,7 +47,7 @@ export default function AuthCallback() {
   return (
     <div className="min-h-screen bg-brand-black flex items-center justify-center">
       <div className="text-center">
-        <img src="/logo-light.png" alt="Brandscape" className="h-12 mx-auto mb-6" />
+        <img src="/logo-dark.png" alt="Brandscape" className="h-12 mx-auto mb-6" />
         <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4" />
         <p className="text-brand-400 font-body text-sm">{status}</p>
       </div>

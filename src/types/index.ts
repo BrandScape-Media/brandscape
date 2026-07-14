@@ -40,6 +40,7 @@ export interface Plan {
   revisionsIncluded: number
   projectsIncluded: number
   generationsPerMonth: number
+  storageGb: number
   prioritySupport: boolean
   customWorkflows: boolean
   isRecommended?: boolean
@@ -156,6 +157,42 @@ export interface ClientAsset {
   client_name?: string
   /** short-lived signed URL for preview/download */
   signed_url?: string
+}
+
+// ===== Client share links & comments =====
+export interface ShareLink {
+  id: string
+  agency_id: string
+  project_id: string
+  token: string
+  title?: string | null
+  is_active: boolean
+  created_at: string
+}
+
+export interface SharedAsset {
+  id: string
+  type: 'image' | 'video' | 'audio'
+  url: string
+  thumbnail_url?: string | null
+  name: string
+  created_at: string
+}
+
+export interface SharedGallery {
+  title: string
+  project_name: string
+  assets: SharedAsset[]
+}
+
+export interface ShareComment {
+  id: string
+  asset_id?: string | null
+  author_name: string
+  body: string
+  timestamp_seconds?: number | null
+  resolved: boolean
+  created_at: string
 }
 
 // ===== Media =====

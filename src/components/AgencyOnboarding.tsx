@@ -34,7 +34,7 @@ export default function AgencyOnboarding() {
   return (
     <div className="min-h-screen bg-brand-black flex items-center justify-center p-6">
       <div className="w-full max-w-md">
-        <img src="/logo-light.png" alt="Brandscape" className="h-8 mx-auto mb-8" />
+        <img src="/logo-dark.png" alt="Brandscape" className="h-8 mx-auto mb-8" />
 
         <div className="bg-brand-900/30 border border-white/5 rounded-2xl p-8">
           <h1 className="font-heading font-bold text-xl mb-2">Set up your agency</h1>

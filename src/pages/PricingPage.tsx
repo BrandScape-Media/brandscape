@@ -243,7 +243,7 @@ function PricingFooter() {
     <footer className="bg-brand-950 border-t border-white/5">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-          <img src="/logo-light.png" alt="Brandscape" className="h-6" />
+          <img src="/logo-dark.png" alt="Brandscape" className="h-6" />
           <p className="text-brand-700 text-xs font-body">
             &copy; {new Date().getFullYear()} Brandscape. All rights reserved.
           </p>

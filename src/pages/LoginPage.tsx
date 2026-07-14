@@ -51,7 +51,7 @@ export default function LoginPage() {
           />
         </div>
         <div className="relative z-10 flex flex-col justify-center px-16">
-          <img src="/logo-light.png" alt="Brandscape" className="h-10 mb-16" />
+          <img src="/logo-dark.png" alt="Brandscape" className="h-10 w-auto self-start mb-16" />
           <h2 className="font-heading font-black text-4xl tracking-tight mb-6 leading-tight">
             Your Creative Pipeline,
             <br />
@@ -81,7 +81,7 @@ export default function LoginPage() {
           {/* Mobile Logo */}
           <div className="lg:hidden text-center mb-10">
             <Link to="/" className="inline-block">
-              <img src="/logo-light.png" alt="Brandscape" className="h-9 mx-auto" />
+              <img src="/logo-dark.png" alt="Brandscape" className="h-9 mx-auto" />
             </Link>
           </div>
 

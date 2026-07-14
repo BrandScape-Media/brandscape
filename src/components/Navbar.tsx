@@ -33,7 +33,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
-            <img src="/logo-light.png" alt="Brandscape" className="h-8 transition-transform duration-300 group-hover:scale-105" />
+            <img src="/logo-dark.png" alt="Brandscape" className="h-8 transition-transform duration-300 group-hover:scale-105" />
           </Link>
 
           {/* Desktop Nav */}

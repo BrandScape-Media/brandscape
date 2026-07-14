@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useProject } from '../../hooks/useData'
 import { updateStage, updateProject } from '../../lib/api'
 import { projectProgress } from './ProjectsPage'
+import ShareManager from './ShareManager'
 import type { DiscoveryData, ProjectStage, StageStatus, WorkflowStage } from '../../types'
 
 const STAGE_ORDER: WorkflowStage[] = workflowStages.map((s) => s.stage)
@@ -23,6 +24,7 @@ export default function ProjectDetailPage() {
   const [editingText, setEditingText] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const [shareOpen, setShareOpen] = useState(false)
 
   const stagesByKey = useMemo(() => {
     const map = new Map<WorkflowStage, ProjectStage>()
@@ -173,16 +175,29 @@ export default function ProjectDetailPage() {
             </div>
           </div>
         </div>
-        <button
-          onClick={handleRunAI}
-          className="px-5 py-2.5 bg-white text-black font-heading font-bold text-sm rounded-lg hover:bg-brand-200 transition-all flex items-center gap-2 self-start sm:self-auto"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-          Run AI
-        </button>
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          <button
+            onClick={() => setShareOpen(true)}
+            className="px-4 py-2.5 border border-white/15 text-white font-heading text-sm rounded-lg hover:border-white/30 hover:bg-white/[0.03] transition-all flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+            </svg>
+            Share
+          </button>
+          <button
+            onClick={handleRunAI}
+            className="px-5 py-2.5 bg-white text-black font-heading font-bold text-sm rounded-lg hover:bg-brand-200 transition-all flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            Run AI
+          </button>
+        </div>
       </div>
+
+      {shareOpen && <ShareManager projectId={project.id} onClose={() => setShareOpen(false)} />}
 
       {notice && (
         <div className="mb-6 px-4 py-3 bg-blue-500/5 border border-blue-500/15 rounded-lg flex items-center justify-between gap-4">
