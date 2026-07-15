@@ -34,7 +34,7 @@ export default function HomePage() {
   return (
     <>
       {/* ===== HERO ===== */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      <section className="relative overflow-hidden">
         {/* Background Grid */}
         <div
           className="absolute inset-0 opacity-[0.04]"
@@ -45,64 +45,70 @@ export default function HomePage() {
           }}
         />
 
-        {/* Gradient Orbs */}
-        <div className="absolute top-1/4 left-1/3 w-[600px] h-[600px] bg-white/[0.03] rounded-full blur-[160px]" />
-        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-white/[0.02] rounded-full blur-[120px]" />
+        {/* Gradient Orbs — colored for warmth */}
+        <div className="absolute top-[12%] left-1/4 w-[600px] h-[600px] bg-violet-600/[0.08] rounded-full blur-[160px]" />
+        <div className="absolute top-1/3 right-1/4 w-[500px] h-[500px] bg-sky-500/[0.06] rounded-full blur-[140px]" />
+        <div className="absolute bottom-0 left-1/3 w-[500px] h-[400px] bg-rose-500/[0.05] rounded-full blur-[130px]" />
 
-        <div className="relative z-10 max-w-6xl mx-auto px-6 lg:px-8 text-center pt-36 pb-24">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2.5 px-5 py-2.5 border border-white/10 rounded-full text-brand-400 text-xs font-heading tracking-wider uppercase mb-10 animate-fade-in backdrop-blur-sm bg-white/[0.02]">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/60 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
-            </span>
-            Now in Early Access — Limited Spots
+        <div className="relative z-10 w-full pt-36 pb-24">
+          <div className="max-w-6xl mx-auto px-6 lg:px-8 text-center">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2.5 px-5 py-2.5 border border-white/10 rounded-full text-brand-300 text-xs font-heading tracking-wider uppercase mb-10 animate-fade-in backdrop-blur-sm bg-white/[0.02]">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400/70 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-gradient-to-br from-violet-400 to-sky-400" />
+              </span>
+              Now in Early Access — Limited Spots
+            </div>
+
+            {/* Heading */}
+            <h1 className="font-heading font-black text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-tight leading-[0.9] mb-8 animate-slide-up">
+              Your Entire Creative
+              <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-300 via-violet-300 to-rose-300">
+                Pipeline, Automated
+              </span>
+            </h1>
+
+            {/* Subtitle */}
+            <p
+              className="font-body text-brand-400 text-lg md:text-xl max-w-2xl mx-auto mb-14 animate-slide-up leading-relaxed"
+              style={{ animationDelay: '0.1s' }}
+            >
+              One pipeline turns a client brief into research, concepts, scripts, shoot
+              plans and finished raws — while your team supervises instead of producing.
+              This is what it makes.
+            </p>
+
+            {/* CTA */}
+            <div
+              className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up"
+              style={{ animationDelay: '0.2s' }}
+            >
+              <Link
+                to="/signup"
+                className="group w-full sm:w-auto px-8 py-4 bg-white text-black font-heading font-bold text-sm tracking-wide rounded-lg hover:bg-brand-200 transition-all duration-300 hover:shadow-[0_0_60px_rgba(167,139,250,0.35)] flex items-center justify-center gap-2"
+              >
+                Start Free Trial
+                <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </Link>
+              <Link
+                to="/pricing"
+                className="w-full sm:w-auto px-8 py-4 border border-white/20 text-white font-heading font-semibold text-sm tracking-wide rounded-lg hover:border-white/40 hover:bg-white/[0.03] transition-all duration-300"
+              >
+                View Pricing
+              </Link>
+            </div>
           </div>
 
-          {/* Heading */}
-          <h1 className="font-heading font-black text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-tight leading-[0.9] mb-8 animate-slide-up">
-            Your Entire Creative
-            <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-brand-300 to-brand-500">
-              Pipeline, Automated
-            </span>
-          </h1>
-
-          {/* Subtitle */}
-          <p
-            className="font-body text-brand-400 text-lg md:text-xl max-w-2xl mx-auto mb-14 animate-slide-up leading-relaxed"
-            style={{ animationDelay: '0.1s' }}
-          >
-            One pipeline turns a client brief into research, concepts, scripts, shoot
-            plans and finished raws — while your team supervises instead of producing.
-            Watch it run below.
-          </p>
-
-          {/* CTA */}
-          <div
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up"
-            style={{ animationDelay: '0.2s' }}
-          >
-            <Link
-              to="/signup"
-              className="group w-full sm:w-auto px-8 py-4 bg-white text-black font-heading font-bold text-sm tracking-wide rounded-lg hover:bg-brand-200 transition-all duration-300 hover:shadow-[0_0_60px_rgba(255,255,255,0.15)] flex items-center justify-center gap-2"
-            >
-              Start Free Trial
-              <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
-            </Link>
-            <Link
-              to="/pricing"
-              className="w-full sm:w-auto px-8 py-4 border border-white/20 text-white font-heading font-semibold text-sm tracking-wide rounded-lg hover:border-white/40 hover:bg-white/[0.03] transition-all duration-300"
-            >
-              View Pricing
-            </Link>
-          </div>
-
-          {/* Live product demo — the pipeline running itself */}
-          <div className="mt-20 animate-slide-up" style={{ animationDelay: '0.3s' }}>
-            <DemoWindow />
+          {/* Showcase reel — the hero showpiece: what the pipeline produces */}
+          <div className="mt-16 animate-slide-up" style={{ animationDelay: '0.3s' }}>
+            <ShowcaseGallery />
+            <p className="text-center text-brand-600 text-xs font-body mt-3">
+              Real creatives from the pipeline — <span className="text-brand-400">drag to explore</span>
+            </p>
           </div>
 
           {/* Trust Badges */}
@@ -111,9 +117,9 @@ export default function HomePage() {
               Built for agencies that ship fast
             </p>
             <div className="grid grid-cols-3 gap-x-12 gap-y-4 max-w-md">
-              <TrustStat label="Production speed" value="10x" />
-              <TrustStat label="Cost per deliverable" value="−70%" />
-              <TrustStat label="One pipeline" value="6 stages" />
+              <TrustStat label="Production speed" value="10x" accent="from-sky-300 to-cyan-300" />
+              <TrustStat label="Cost per deliverable" value="−70%" accent="from-emerald-300 to-teal-300" />
+              <TrustStat label="Your SOP, on autopilot" value="Automated" accent="from-violet-300 to-fuchsia-300" />
             </div>
           </div>
         </div>
@@ -137,25 +143,26 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ===== SHOWCASE — creatives made by the pipeline ===== */}
-      <section id="showcase" className="py-28 bg-brand-black overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 mb-14">
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-            <div>
-              <span className="font-heading text-xs tracking-[0.3em] uppercase text-brand-500 mb-4 block">
-                Showcase
-              </span>
-              <h2 className="font-heading font-black text-4xl md:text-5xl tracking-tight">
-                Made by the Pipeline.
-              </h2>
-            </div>
-            <p className="font-body text-brand-400 max-w-sm text-base md:text-right">
-              Stills and clips generated from real briefs — brand reference in,
-              ready-to-post creative out.
+      {/* ===== LIVE DEMO — the pipeline running itself ===== */}
+      <section id="demo" className="py-28 bg-brand-black relative overflow-hidden">
+        <div className="absolute top-1/4 left-1/4 w-[600px] h-[500px] bg-sky-500/[0.05] rounded-full blur-[180px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[400px] bg-violet-500/[0.05] rounded-full blur-[160px]" />
+        <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <span className="inline-flex items-center gap-2 font-heading text-xs tracking-[0.3em] uppercase mb-4">
+              <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-sky-400 to-violet-400" />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-300 to-violet-300">Live preview</span>
+            </span>
+            <h2 className="font-heading font-black text-4xl md:text-5xl tracking-tight mb-5">
+              Watch the Pipeline Work.
+            </h2>
+            <p className="font-body text-brand-400 max-w-xl mx-auto text-lg">
+              The same dashboard your team uses — every stage thinks, writes, and hands
+              off to the next. Click any stage to jump in.
             </p>
           </div>
+          <DemoWindow />
         </div>
-        <ShowcaseGallery />
       </section>
 
       {/* ===== FEATURES ===== */}
@@ -300,27 +307,32 @@ export default function HomePage() {
 
       {/* ===== COMPARISON: Traditional vs Brandscape ===== */}
       <section id="why" className="py-32 bg-brand-950 relative overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[400px] bg-white/[0.02] rounded-full blur-[200px]" />
+        {/* colored ambience biased to the Brandscape (right) side */}
+        <div className="absolute top-1/3 right-[8%] w-[560px] h-[420px] bg-violet-600/[0.10] rounded-full blur-[170px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-[420px] h-[360px] bg-sky-500/[0.08] rounded-full blur-[150px]" />
+        <div className="absolute top-1/4 left-[6%] w-[360px] h-[320px] bg-rose-600/[0.05] rounded-full blur-[150px]" />
         <div className="max-w-5xl mx-auto px-6 lg:px-8 relative z-10">
           <div className={`text-center mb-20 transition-all duration-700 ${inView('comparison') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-            <span className="font-heading text-xs tracking-[0.3em] uppercase text-brand-500 mb-4 block">
-              Why Brandscape
+            <span className="inline-flex items-center gap-2 font-heading text-xs tracking-[0.3em] uppercase mb-4">
+              <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-sky-400 to-violet-400" />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-300 to-violet-300">Why Brandscape</span>
             </span>
             <h2 className="font-heading font-black text-4xl md:text-5xl tracking-tight mb-6">
-              The Old Way vs. The New Way
+              The Old Way vs.{' '}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-300 via-violet-300 to-rose-300">The New Way</span>
             </h2>
           </div>
 
           <div data-animate id="comparison" className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* The Old Way */}
-            <div className="bg-brand-900/20 border border-red-500/10 rounded-2xl p-8">
+            <div className="bg-brand-900/20 border border-red-500/15 rounded-2xl p-8 md:mt-6">
               <div className="flex items-center gap-3 mb-8">
                 <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
                   <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </div>
-                <h3 className="font-heading font-bold text-lg text-red-400">The Old Way</h3>
+                <h3 className="font-heading font-bold text-lg text-red-400/90">The Old Way</h3>
               </div>
               <ul className="space-y-4">
                 {[
@@ -336,41 +348,48 @@ export default function HomePage() {
                     <svg className="w-4 h-4 text-red-500/50 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
-                    <span className="text-brand-400 text-sm font-body">{item}</span>
+                    <span className="text-brand-400 text-sm font-body line-through decoration-red-500/30">{item}</span>
                   </li>
                 ))}
               </ul>
             </div>
 
-            {/* The Brandscape Way */}
-            <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-8 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-white/[0.04] rounded-full blur-[80px]" />
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <h3 className="font-heading font-bold text-lg text-white">With Brandscape</h3>
-              </div>
-              <ul className="space-y-4">
-                {[
-                  'Structured discovery forms, auto-populated',
-                  'AI research completed in minutes',
-                  '3 creative concepts with A/B angles instantly',
-                  'One pipeline — every stage connected',
-                  'AI-generated scripts, editable or re-runnable',
-                  'Scene-by-scene shoot plans with prompts',
-                  'Automated editing with instant delivery',
-                ].map((item, i) => (
-                  <li key={i} className="flex items-start gap-3">
-                    <svg className="w-4 h-4 text-white mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            {/* The Brandscape Way — vibrant, animated gradient border */}
+            <div className="ai-glow ai-glow-soft rounded-2xl">
+              <div className="relative bg-brand-950 rounded-2xl p-8 overflow-hidden">
+                <div className="absolute -top-10 -right-10 w-52 h-52 bg-violet-500/20 rounded-full blur-[70px]" />
+                <div className="absolute -bottom-10 -left-10 w-52 h-52 bg-sky-500/15 rounded-full blur-[70px]" />
+                <div className="relative flex items-center gap-3 mb-8">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-sky-500/30 to-violet-500/30 border border-white/10 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    <span className="text-brand-200 text-sm font-body">{item}</span>
-                  </li>
-                ))}
-              </ul>
+                  </div>
+                  <h3 className="font-heading font-bold text-lg text-transparent bg-clip-text bg-gradient-to-r from-sky-200 via-violet-200 to-rose-200">
+                    With Brandscape
+                  </h3>
+                </div>
+                <ul className="relative space-y-4">
+                  {[
+                    'Structured discovery forms, auto-populated',
+                    'AI research completed in minutes',
+                    '3 creative concepts with A/B angles instantly',
+                    'One pipeline — every stage connected',
+                    'AI-generated scripts, editable or re-runnable',
+                    'Scene-by-scene shoot plans with prompts',
+                    'Generated raws, straight to a client gallery',
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <span className="w-4 h-4 mt-0.5 flex-shrink-0 rounded-full bg-gradient-to-br from-sky-400 to-violet-500 flex items-center justify-center">
+                        <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3.5} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </span>
+                      <span className="text-white text-sm font-body">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
         </div>
@@ -419,8 +438,9 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div>
-              <span className="font-heading text-xs tracking-[0.3em] uppercase text-brand-500 mb-4 block">
-                Infrastructure
+              <span className="inline-flex items-center gap-2 font-heading text-xs tracking-[0.3em] uppercase mb-4">
+                <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-emerald-400 to-sky-400" />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-sky-300">Infrastructure</span>
               </span>
               <h2 className="font-heading font-black text-4xl md:text-5xl tracking-tight mb-6">
                 Enterprise-Grade.
@@ -428,18 +448,19 @@ export default function HomePage() {
                 On-Demand GPU Power.
               </h2>
               <p className="font-body text-brand-400 text-lg mb-8 leading-relaxed">
-                Every image, video clip, and text output is generated on rented GPU infrastructure
-                via Runpod. No waiting for queues. No capacity limits. Scale to your agency&apos;s needs.
+                Every image, video clip, and line of copy is produced by our own generation
+                pipeline on dedicated GPU infrastructure that scales on demand. No queues, no
+                capacity limits — just finished creative.
               </p>
               <div className="space-y-4">
                 {[
-                  { label: 'Runpod GPU Clusters', desc: 'A100 GPUs spun up on demand for each generation job' },
-                  { label: 'ComfyUI Workflows', desc: 'Custom image and video generation pipelines with brand reference inputs' },
-                  { label: 'Specialized LLMs', desc: 'Each workflow stage uses a dedicated model with its own system prompt' },
-                  { label: 'Metadata Injection', desc: 'All assets stripped of generation data and tagged with your custom metadata' },
+                  { label: 'Dedicated GPU Compute', desc: 'Enterprise GPUs spun up on demand for every generation job — no shared queues', color: 'from-emerald-400 to-teal-400' },
+                  { label: 'Proprietary Generation Pipeline', desc: 'Our own image & video engine, guided by each client’s real product photos and brand kit', color: 'from-sky-400 to-blue-400' },
+                  { label: 'Specialized AI Models', desc: 'Every pipeline stage runs a purpose-built model tuned for that job', color: 'from-violet-400 to-purple-400' },
+                  { label: 'Clean Metadata', desc: 'Assets are stripped of generation data and tagged with your custom metadata', color: 'from-rose-400 to-pink-400' },
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-4">
-                    <div className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <div className={`w-6 h-6 rounded-md bg-gradient-to-br ${item.color} flex items-center justify-center flex-shrink-0 mt-0.5`}>
                       <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                       </svg>
@@ -462,10 +483,10 @@ export default function HomePage() {
                   <div className="w-3 h-3 rounded-full bg-green-500/60" />
                   <span className="text-brand-600 text-xs font-heading ml-2">brandscape.pipeline</span>
                 </div>
-                {['Client Discovery → Database', 'Research AI → Report', 'Ideation AI → Concepts', 'Strategy AI → Brief', 'Script AI → Scripts', 'Shoot Plan AI → Prompts', 'ComfyUI GPU → Assets', 'Auto Editor → Delivery'].map((line, i) => (
+                {['Client Discovery → Database', 'Research AI → Report', 'Ideation AI → Concepts', 'Script AI → Scripts', 'Shoot Plan AI → Prompts', 'Generation Engine → Stills', 'Generation Engine → Clips', 'Client Gallery → Delivery'].map((line, i) => (
                   <div key={i} className="flex items-center gap-3 font-mono text-xs">
                     <span className="text-brand-700 w-5 text-right">{i + 1}.</span>
-                    <span className={i >= 6 ? 'text-brand-300' : 'text-brand-500'}>{line}</span>
+                    <span className={i >= 5 ? 'text-transparent bg-clip-text bg-gradient-to-r from-sky-300 to-violet-300 font-semibold' : 'text-brand-500'}>{line}</span>
                   </div>
                 ))}
                 <div className="pt-4 border-t border-white/5 flex items-center gap-2">
@@ -618,10 +639,14 @@ export default function HomePage() {
   )
 }
 
-function TrustStat({ label, value }: { label: string; value: string }) {
+function TrustStat({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
     <div>
-      <div className="font-heading font-black text-2xl md:text-3xl text-white mb-1">{value}</div>
+      <div className={`font-heading font-black text-2xl md:text-3xl mb-1 whitespace-nowrap ${
+        accent ? `text-transparent bg-clip-text bg-gradient-to-r ${accent}` : 'text-white'
+      }`}>
+        {value}
+      </div>
       <div className="text-brand-600 text-[10px] font-heading tracking-wider uppercase">{label}</div>
     </div>
   )

@@ -84,7 +84,7 @@ export default function PricingPage() {
               />
               <FaqItem
                 question="How does GPU usage work?"
-                answer="Image and video generation runs on rented GPU infrastructure via Runpod. All GPU costs are included in your plan — no surprise bills, no per-generation fees."
+                answer="Image and video generation runs on our own dedicated GPU infrastructure. All compute costs are included in your plan — no surprise bills, no per-generation fees."
               />
               <FaqItem
                 question="Can my clients access their assets?"
@@ -92,7 +92,7 @@ export default function PricingPage() {
               />
               <FaqItem
                 question="What if I need custom AI workflows?"
-                answer="Our Enterprise plan includes custom workflow design. We&apos;ll tailor the AI pipeline, system prompts, and ComfyUI workflows to your agency&apos;s specific processes."
+                answer="Our Enterprise plan includes custom workflow design. We&apos;ll tailor the AI pipeline and generation models to your agency&apos;s specific processes and brand style."
               />
               <FaqItem
                 question="Can I switch plans mid-cycle?"
@@ -100,7 +100,7 @@ export default function PricingPage() {
               />
               <FaqItem
                 question="What AI models power the platform?"
-                answer="Each stage uses specialized models: dedicated LLMs for research, ideation, strategy, and scripting. Visual generation runs on ComfyUI workflows with custom LoRAs for brand consistency."
+                answer="Each stage uses specialized models: dedicated LLMs for research, ideation, and scripting, plus a proprietary visual generation pipeline tuned for brand consistency using your own product imagery."
               />
             </div>
           </div>

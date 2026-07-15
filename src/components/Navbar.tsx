@@ -25,10 +25,14 @@ export default function Navbar() {
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
         scrolled
-          ? 'bg-brand-black/80 backdrop-blur-2xl border-b border-white/[0.06]'
-          : 'bg-transparent'
+          ? 'bg-brand-black/85 backdrop-blur-2xl shadow-[0_8px_30px_-12px_rgba(0,0,0,0.6)]'
+          : 'bg-gradient-to-b from-brand-black/70 to-transparent backdrop-blur-sm'
       }`}
     >
+      {/* persistent hairline so the header never blends into content */}
+      <div className={`pointer-events-none absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent to-transparent transition-opacity duration-500 ${
+        scrolled ? 'via-white/15 opacity-100' : 'via-white/[0.07] opacity-100'
+      }`} />
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}

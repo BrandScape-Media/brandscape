@@ -306,10 +306,78 @@ select:-webkit-autofill {
 /* anchored sections clear the fixed navbar */
 section[id] { scroll-margin-top: 88px; }
 
+/* ===== Showcase reel — drag-scrollable, popup on hover ===== */
+.reel-scroller {
+  display: flex;
+  gap: 1.25rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  cursor: grab;
+  padding: 1.75rem 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.reel-scroller::-webkit-scrollbar { display: none; }
+.reel-scroller:active { cursor: grabbing; }
+.reel-item {
+  flex-shrink: 0;
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.4s ease, filter 0.4s ease;
+  will-change: transform;
+}
+.reel-scroller:not(:active) .reel-item:hover {
+  transform: translateY(-12px) scale(1.05);
+  z-index: 5;
+  box-shadow: 0 26px 64px -16px rgba(0, 0, 0, 0.75),
+    0 0 40px -6px var(--reel-glow, rgba(139, 123, 247, 0.55));
+  filter: saturate(1.18) brightness(1.06);
+}
+.reel-item__label {
+  transform: translateY(8px);
+  opacity: 0.85;
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease;
+}
+.reel-item:hover .reel-item__label {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* ===== Dashboard ambient glow (left + bottom, mouse-reactive) ===== */
+.dash-ambient::before,
+.dash-ambient::after {
+  content: '';
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+}
+.dash-ambient::before {
+  bottom: -10%;
+  left: -6%;
+  width: 46vw;
+  max-width: 660px;
+  height: 46vw;
+  max-height: 660px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 66%);
+  transform: translate(var(--gx, 0px), var(--gy, 0px));
+  transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.dash-ambient::after {
+  top: 28%;
+  left: -14%;
+  width: 34vw;
+  max-width: 480px;
+  height: 62vh;
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 70%);
+  transform: translate(calc(var(--gx, 0px) * 0.5), calc(var(--gy, 0px) * 0.5));
+  transition: transform 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ai-glow::before, .ai-glow::after { animation: none; }
   .marquee { animation: none; }
   .demo-line, .demo-thumb, .demo-window-enter { animation: none; }
+  .reel-item, .reel-item__label { transition: none; }
+  .dash-ambient::before, .dash-ambient::after { transition: none; }
 }
 
 /* ===== Scrollbar ===== */

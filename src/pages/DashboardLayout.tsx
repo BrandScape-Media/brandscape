@@ -1,7 +1,36 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import AgencyOnboarding from '../components/AgencyOnboarding'
+
+/**
+ * Soft white glow bleeding in from the left and bottom of the workspace,
+ * drifting a little toward the cursor. Sits above the black base but below
+ * the content, so it shows through the translucent cards.
+ */
+function AmbientGlow() {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    let raf = 0
+    const onMove = (e: MouseEvent) => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        const el = ref.current
+        if (!el) return
+        const px = e.clientX / window.innerWidth - 0.5 // -0.5 … 0.5
+        const py = e.clientY / window.innerHeight - 0.5
+        el.style.setProperty('--gx', `${px * 46}px`)
+        el.style.setProperty('--gy', `${py * 46}px`)
+      })
+    }
+    window.addEventListener('mousemove', onMove)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      cancelAnimationFrame(raf)
+    }
+  }, [])
+  return <div ref={ref} className="dash-ambient pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden />
+}
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -30,7 +59,7 @@ export default function DashboardLayout() {
   ]
 
   return (
-    <div className="min-h-screen bg-brand-black flex">
+    <div className="relative min-h-screen bg-brand-black flex">
       {/* Sidebar */}
       <aside
         className={`fixed lg:static inset-y-0 left-0 z-40 bg-brand-950 border-r border-white/5 transition-all duration-300 ${
@@ -88,7 +117,8 @@ export default function DashboardLayout() {
       </aside>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="relative z-10 flex-1 flex flex-col min-w-0">
+        <AmbientGlow />
         {/* Top Bar */}
         <header className="h-16 bg-brand-950/80 backdrop-blur-xl border-b border-white/5 sticky top-0 z-30 flex items-center px-6 gap-4">
           <button

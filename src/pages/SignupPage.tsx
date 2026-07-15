@@ -54,7 +54,7 @@ export default function SignupPage() {
           />
         </div>
         <div className="relative z-10 flex flex-col justify-center px-16">
-          <MetalLogo heightClass="h-20" className="self-start mb-14" />
+          <MetalLogo heightClass="h-32 2xl:h-40" className="self-start mb-12 -ml-2" />
           <h2 className="font-heading font-black text-4xl tracking-tight mb-6 leading-tight">
             Start Creating
             <br />
