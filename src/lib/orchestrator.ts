@@ -56,3 +56,39 @@ export async function reviseStage(projectId: string, stage: WorkflowStage, messa
   const res = await orThrow(await post(`/v1/projects/${projectId}/stages/${stage}/revise`, { message }))
   return res.json()
 }
+
+// ===== Uploaded assets on Cloudflare R2 (via orchestrator presigned URLs) =====
+
+export interface PresignedUpload {
+  url: string
+  key: string
+}
+
+/**
+ * Presign a direct-to-R2 upload. Returns null while R2 isn't configured
+ * server-side (503) — the caller then falls back to Supabase Storage.
+ * Quota/validation errors throw with the server's message.
+ */
+export async function presignAssetUpload(input: {
+  clientId: string
+  fileName: string
+  contentType: string
+  sizeBytes: number
+}): Promise<PresignedUpload | null> {
+  const res = await post('/v1/assets/presign-upload', input)
+  if (res.status === 503) return null
+  return (await orThrow(res)).json()
+}
+
+/** Batch of short-lived preview/download URLs for R2-hosted assets, keyed by storage path. */
+export async function getAssetViewUrls(keys: string[]): Promise<Record<string, string>> {
+  if (keys.length === 0) return {}
+  const res = await orThrow(await post('/v1/assets/view-urls', { keys }))
+  const data = await res.json()
+  return data.urls ?? {}
+}
+
+/** Remove an R2 object (the metadata row is deleted separately under RLS). */
+export async function deleteAssetObject(key: string): Promise<void> {
+  await orThrow(await post('/v1/assets/delete-object', { key }))
+}

@@ -47,10 +47,14 @@ After editing: commit + push → Railway redeploys automatically.
 
 - Auth, database rows (clients, projects, stage outputs, comments):
   **Supabase Postgres** — not metered per tier.
-- Uploaded brand assets: **Supabase Storage**, bucket `brand-assets`,
-  metered against `storageGb`.
-- Generated media (images/video/TTS): **Cloudflare R2** (being wired up),
-  will count against the same `storageGb` quota.
+- Uploaded brand assets: **Cloudflare R2** (bucket `brandscape-media`,
+  presigned URLs via the orchestrator — setup in the private repo's
+  R2-SETUP.md), metered against `storageGb` and enforced server-side at
+  presign time. Falls back to Supabase Storage only while the R2 env vars
+  are missing; pre-switch uploads stay on Supabase (tracked per-file by
+  `client_assets.storage_provider`).
+- Generated media (images/video/TTS): same R2 bucket under `generated/…`,
+  counts against the same `storageGb` quota.
 
 ## Recipe: changing a tier after market research
 

@@ -1,4 +1,5 @@
 import { getSupabase } from './supabase/client'
+import { presignAssetUpload, getAssetViewUrls, deleteAssetObject } from './orchestrator'
 import type {
   Agency,
   Client,
@@ -164,6 +165,17 @@ export async function getLatestStageJob(projectId: string, stage: WorkflowStage)
   return data
 }
 
+/** Jobs still queued/running for a project — restores the "AI working" UI after a page reload. */
+export async function listActiveJobs(projectId: string): Promise<Job[]> {
+  const { data, error } = await getSupabase()
+    .from('jobs')
+    .select('id, stage, type, status, error, created_at, started_at, finished_at')
+    .eq('project_id', projectId)
+    .in('status', ['queued', 'running'])
+  if (error) throw error
+  return data ?? []
+}
+
 export async function deleteProject(projectId: string): Promise<void> {
   const { error } = await getSupabase().from('projects').delete().eq('id', projectId)
   if (error) throw error
@@ -206,14 +218,29 @@ export async function listClientAssets(): Promise<ClientAsset[]> {
     return { ...rest, client_name: clients?.name }
   })
 
-  // short-lived signed URLs for preview/download (private bucket)
-  if (assets.length > 0) {
+  // short-lived signed URLs for preview/download, per storage provider
+  const supaAssets = assets.filter((a) => (a.storage_provider ?? 'supabase') === 'supabase')
+  if (supaAssets.length > 0) {
     const { data: signed } = await supabase.storage
       .from(BRAND_BUCKET)
-      .createSignedUrls(assets.map((a) => a.storage_path), 3600)
+      .createSignedUrls(supaAssets.map((a) => a.storage_path), 3600)
     signed?.forEach((s, i) => {
-      if (s.signedUrl) assets[i].signed_url = s.signedUrl
+      if (s.signedUrl) supaAssets[i].signed_url = s.signedUrl
     })
+  }
+
+  const r2Assets = assets.filter((a) => a.storage_provider === 'r2')
+  if (r2Assets.length > 0) {
+    // if the orchestrator is unreachable, show the list without previews
+    // rather than failing the whole page
+    try {
+      const urls = await getAssetViewUrls(r2Assets.map((a) => a.storage_path))
+      r2Assets.forEach((a) => {
+        if (urls[a.storage_path]) a.signed_url = urls[a.storage_path]
+      })
+    } catch {
+      /* previews unavailable */
+    }
   }
   return assets
 }
@@ -225,13 +252,38 @@ export async function uploadClientAsset(
   file: File,
 ): Promise<ClientAsset> {
   const supabase = getSupabase()
-  const safeName = file.name.replace(/[^\w.\-()\s]/g, '_')
-  const storagePath = `${agencyId}/${clientId}/${Date.now()}-${safeName}`
+  const contentType = file.type || 'application/octet-stream'
 
-  const { error: uploadError } = await supabase.storage
-    .from(BRAND_BUCKET)
-    .upload(storagePath, file, { contentType: file.type || undefined, upsert: false })
-  if (uploadError) throw uploadError
+  // Files go to Cloudflare R2 (no egress fees, real quota room) via a
+  // presigned PUT from the orchestrator. null = R2 not configured yet →
+  // fall back to Supabase Storage so uploads never hard-break.
+  const presigned = await presignAssetUpload({
+    clientId,
+    fileName: file.name,
+    contentType,
+    sizeBytes: file.size,
+  })
+
+  let storagePath: string
+  let provider: 'supabase' | 'r2'
+  if (presigned) {
+    const putRes = await fetch(presigned.url, {
+      method: 'PUT',
+      headers: { 'Content-Type': contentType },
+      body: file,
+    })
+    if (!putRes.ok) throw new Error(`Upload to storage failed (${putRes.status})`)
+    storagePath = presigned.key
+    provider = 'r2'
+  } else {
+    const safeName = file.name.replace(/[^\w.\-()\s]/g, '_')
+    storagePath = `${agencyId}/${clientId}/${Date.now()}-${safeName}`
+    const { error: uploadError } = await supabase.storage
+      .from(BRAND_BUCKET)
+      .upload(storagePath, file, { contentType: file.type || undefined, upsert: false })
+    if (uploadError) throw uploadError
+    provider = 'supabase'
+  }
 
   const { data, error } = await supabase
     .from('client_assets')
@@ -241,6 +293,7 @@ export async function uploadClientAsset(
       kind,
       name: file.name,
       storage_path: storagePath,
+      storage_provider: provider,
       mime_type: file.type || null,
       file_size: file.size,
     })
@@ -248,16 +301,26 @@ export async function uploadClientAsset(
     .single()
   if (error) {
     // don't leave an orphan file behind if the metadata insert failed
-    await supabase.storage.from(BRAND_BUCKET).remove([storagePath]).catch(() => undefined)
+    if (provider === 'r2') {
+      await deleteAssetObject(storagePath).catch(() => undefined)
+    } else {
+      await supabase.storage.from(BRAND_BUCKET).remove([storagePath]).catch(() => undefined)
+    }
     throw error
   }
   return data
 }
 
-export async function deleteClientAsset(asset: Pick<ClientAsset, 'id' | 'storage_path'>): Promise<void> {
+export async function deleteClientAsset(
+  asset: Pick<ClientAsset, 'id' | 'storage_path' | 'storage_provider'>,
+): Promise<void> {
   const supabase = getSupabase()
-  const { error: storageError } = await supabase.storage.from(BRAND_BUCKET).remove([asset.storage_path])
-  if (storageError) throw storageError
+  if (asset.storage_provider === 'r2') {
+    await deleteAssetObject(asset.storage_path)
+  } else {
+    const { error: storageError } = await supabase.storage.from(BRAND_BUCKET).remove([asset.storage_path])
+    if (storageError) throw storageError
+  }
   const { error } = await supabase.from('client_assets').delete().eq('id', asset.id)
   if (error) throw error
 }

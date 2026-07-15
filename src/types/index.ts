@@ -150,6 +150,8 @@ export interface ClientAsset {
   kind: ClientAssetKind
   name: string
   storage_path: string
+  /** where the file bytes live — Supabase Storage (legacy) or Cloudflare R2 */
+  storage_provider?: 'supabase' | 'r2'
   mime_type?: string | null
   file_size?: number | null
   uploaded_by?: string | null

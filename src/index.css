@@ -155,6 +155,80 @@ select:-webkit-autofill {
   .metal-logo, .metal-logo__base { animation: none; transition: none; }
 }
 
+/* ===== AI working indicator ===== */
+/* light band sweeping across the panel */
+.bs-panel-sweep {
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.035), transparent);
+  animation: bs-sweep 3.2s ease-in-out infinite;
+}
+@keyframes bs-sweep {
+  0% { transform: translateX(-120%) skewX(-12deg); }
+  100% { transform: translateX(420%) skewX(-12deg); }
+}
+/* expanding rings around the core */
+.bs-ring {
+  animation: bs-ring 1.8s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+}
+@keyframes bs-ring {
+  0% { transform: scale(0.35); opacity: 0.9; }
+  100% { transform: scale(1.15); opacity: 0; }
+}
+.bs-core {
+  animation: bs-core 1.8s ease-in-out infinite;
+  box-shadow: 0 0 18px rgba(96, 165, 250, 0.55);
+}
+@keyframes bs-core {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.25); }
+}
+/* status phrase fade-in on change */
+.bs-phrase {
+  animation: bs-phrase 0.45s ease-out;
+}
+@keyframes bs-phrase {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* ghost lines "write" themselves, then breathe */
+.bs-ghost-line {
+  width: var(--w, 80%);
+  transform-origin: left center;
+  animation: bs-write 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both,
+    bs-breathe 2.4s ease-in-out infinite 0.8s;
+}
+@keyframes bs-write {
+  from { transform: scaleX(0); opacity: 0; }
+  to { transform: scaleX(1); opacity: 1; }
+}
+@keyframes bs-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.bs-caret {
+  animation: bs-caret 1s steps(1) infinite;
+}
+@keyframes bs-caret {
+  0%, 55% { opacity: 1; }
+  56%, 100% { opacity: 0; }
+}
+/* shimmering "AI WORKING" badge text */
+.bs-working-badge {
+  background: linear-gradient(90deg, #93c5fd 0%, #d8b4fe 40%, #ffffff 50%, #d8b4fe 60%, #93c5fd 100%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: bs-badge-shimmer 2.4s linear infinite;
+}
+@keyframes bs-badge-shimmer {
+  from { background-position: 220% 0; }
+  to { background-position: -20% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bs-panel-sweep, .bs-ring, .bs-core, .bs-ghost-line, .bs-caret, .bs-working-badge { animation: none; }
+  .bs-ghost-line { transform: none; opacity: 1; }
+}
+
 /* ===== Scrollbar ===== */
 ::-webkit-scrollbar {
   width: 6px;

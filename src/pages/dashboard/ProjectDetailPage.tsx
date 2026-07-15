@@ -4,8 +4,10 @@ import { workflowStages } from '../../data/workflow'
 import WorkflowIcon from '../../components/WorkflowIcon'
 import { useAuth } from '../../context/AuthContext'
 import { useProject } from '../../hooks/useData'
-import { updateStage, updateProject, deleteProject, getLatestStageJob } from '../../lib/api'
+import { updateStage, updateProject, deleteProject, getLatestStageJob, listActiveJobs } from '../../lib/api'
 import { runStage, reviseStage } from '../../lib/orchestrator'
+import Markdown from '../../components/Markdown'
+import AiWorking from '../../components/AiWorking'
 import { getSupabase, isSupabaseConfigured } from '../../lib/supabase/client'
 import { timeAgo } from '../../lib/format'
 import { projectProgress, stageLabel as stageLabelFor } from './ProjectsPage'
@@ -33,6 +35,8 @@ export default function ProjectDetailPage() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [failedJob, setFailedJob] = useState<Job | null>(null)
+  // stages with an AI job currently queued/running → drives the "thinking" UI
+  const [activeRuns, setActiveRuns] = useState<Map<WorkflowStage, 'llm_generate' | 'llm_revise'>>(new Map())
 
   const stagesByKey = useMemo(() => {
     const map = new Map<WorkflowStage, ProjectStage>()
@@ -67,13 +71,42 @@ export default function ProjectDetailPage() {
       .channel(`project-${id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'project_stages', filter: `project_id=eq.${id}` }, () => reload())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs', filter: `project_id=eq.${id}` }, (payload) => {
-        const row = payload.new as { status?: string; error?: string; stage?: string }
+        const row = payload.new as { status?: string; error?: string; stage?: string; type?: string }
+        if (row?.stage) {
+          const stage = row.stage as WorkflowStage
+          setActiveRuns((prev) => {
+            const next = new Map(prev)
+            if (row.status === 'queued' || row.status === 'running') {
+              next.set(stage, row.type === 'llm_revise' ? 'llm_revise' : 'llm_generate')
+            } else {
+              next.delete(stage)
+            }
+            return next
+          })
+        }
         if (row?.status === 'failed') setNotice(`AI run failed${row.stage ? ` (${row.stage})` : ''}: ${row.error ?? 'unknown error'}`)
         reload()
       })
       .subscribe()
     return () => { getSupabase().removeChannel(channel) }
   }, [demoMode, id, reload])
+
+  // survive page reloads mid-run: pick up jobs that are already in flight
+  useEffect(() => {
+    if (demoMode || !id || !isSupabaseConfigured()) return
+    listActiveJobs(id)
+      .then((jobs) => {
+        if (jobs.length === 0) return
+        setActiveRuns((prev) => {
+          const next = new Map(prev)
+          jobs.forEach((j) => {
+            if (j.stage) next.set(j.stage as WorkflowStage, j.type === 'llm_revise' ? 'llm_revise' : 'llm_generate')
+          })
+          return next
+        })
+      })
+      .catch(() => undefined)
+  }, [demoMode, id])
 
   // When the selected stage is in the failed ("revision") state, pull the
   // latest job so the user can see WHY it failed and retry.
@@ -113,6 +146,10 @@ export default function ProjectDetailPage() {
   const currentWorkflow = workflowStages[activeStage!]
   const currentStageRow = stagesByKey.get(currentWorkflow.stage)
   const currentStatus: StageStatus = currentStageRow?.status ?? 'pending'
+  // "completed"/"revision" from Realtime always wins over a stale job entry,
+  // so a missed job event can't leave the thinking UI stuck on screen
+  const runKind = activeRuns.get(currentWorkflow.stage)
+  const isRunning = !!runKind && currentStatus !== 'completed' && currentStatus !== 'revision'
   const completedCount = (project.stages ?? []).filter(
     (s) => STAGE_ORDER.includes(s.stage) && s.status === 'completed',
   ).length
@@ -159,6 +196,7 @@ export default function ProjectDetailPage() {
 
     try {
       await reviseStage(project.id, stage, text)
+      setActiveRuns((prev) => new Map(prev).set(stage, 'llm_revise'))
       setChatMessages((prev) => [
         ...prev,
         { role: 'ai', text: `On it — revising the ${stageLabelFor(stage)} output now. The stage updates live when it's done.` },
@@ -190,10 +228,11 @@ export default function ProjectDetailPage() {
     }
     try {
       await runStage(project.id, stage)
-      setNotice(`AI is generating the ${stageLabelFor(stage)} stage — this updates live when it finishes.`)
+      setActiveRuns((prev) => new Map(prev).set(stage, 'llm_generate'))
     } catch (err) {
       setNotice(err instanceof Error ? err.message : 'Could not start the AI run.')
       // roll back the optimistic status
+      setActiveRuns((prev) => { const next = new Map(prev); next.delete(stage); return next })
       await updateStage(project.id, stage, { status: 'pending', started_at: null }).catch(() => undefined)
       reload()
     }
@@ -278,12 +317,22 @@ export default function ProjectDetailPage() {
           </button>
           <button
             onClick={() => handleRunAI(currentWorkflow.stage)}
-            className="px-5 py-2.5 bg-white text-black font-heading font-bold text-sm rounded-lg hover:bg-brand-200 transition-all flex items-center gap-2"
+            disabled={isRunning}
+            className="px-5 py-2.5 bg-white text-black font-heading font-bold text-sm rounded-lg hover:bg-brand-200 transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            Run AI
+            {isRunning ? (
+              <>
+                <span className="w-4 h-4 rounded-full border-2 border-black/20 border-t-black animate-spin" />
+                AI Working…
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Run AI
+              </>
+            )}
           </button>
 
           {/* Overflow menu: archive / delete */}
@@ -413,14 +462,20 @@ export default function ProjectDetailPage() {
                   <p className="text-brand-600 text-xs font-body">{currentWorkflow.description}</p>
                 </div>
               </div>
-              <span className={`px-3 py-1.5 rounded-lg text-[10px] font-heading font-bold tracking-wider ${
-                currentStatus === 'completed' ? 'bg-green-500/15 text-green-400' :
-                currentStatus === 'in_progress' ? 'bg-blue-500/15 text-blue-400' :
-                currentStatus === 'revision' ? 'bg-amber-500/15 text-amber-400' :
-                'bg-brand-800 text-brand-500'
-              }`}>
-                {currentStatus.replace('_', ' ').toUpperCase()}
-              </span>
+              {isRunning ? (
+                <span className="px-3 py-1.5 rounded-lg text-[10px] font-heading font-bold tracking-wider bg-blue-500/10 border border-blue-400/20">
+                  <span className="bs-working-badge">{runKind === 'llm_revise' ? 'AI REVISING' : 'AI WORKING'}</span>
+                </span>
+              ) : (
+                <span className={`px-3 py-1.5 rounded-lg text-[10px] font-heading font-bold tracking-wider ${
+                  currentStatus === 'completed' ? 'bg-green-500/15 text-green-400' :
+                  currentStatus === 'in_progress' ? 'bg-blue-500/15 text-blue-400' :
+                  currentStatus === 'revision' ? 'bg-amber-500/15 text-amber-400' :
+                  'bg-brand-800 text-brand-500'
+                }`}>
+                  {currentStatus.replace('_', ' ').toUpperCase()}
+                </span>
+              )}
             </div>
 
             {/* Stage Content */}
@@ -442,12 +497,19 @@ export default function ProjectDetailPage() {
                   stage={currentWorkflow.stage}
                   stageRow={currentStageRow}
                   discovery={project.discovery_data ?? null}
+                  running={isRunning}
+                  revising={runKind === 'llm_revise'}
                 />
               )}
 
               {/* Action Bar */}
               <div className="mt-8 pt-6 border-t border-white/5 flex flex-wrap items-center gap-3">
-                {editingText !== null ? (
+                {isRunning && editingText === null ? (
+                  <div className="flex items-center gap-2.5 text-brand-500 text-xs font-body">
+                    <span className="w-3.5 h-3.5 rounded-full border-2 border-blue-400/25 border-t-blue-400 animate-spin flex-shrink-0" />
+                    The AI is {runKind === 'llm_revise' ? 'revising' : 'generating'} this stage — actions unlock when it lands.
+                  </div>
+                ) : editingText !== null ? (
                   <>
                     <button
                       onClick={() => setEditingText(null)}
@@ -692,13 +754,19 @@ function renderDiscoveryValue(value: string | string[]): string {
   return Array.isArray(value) ? value.join('\n') : value
 }
 
-function StageBody({ stage, stageRow, discovery }: {
+function StageBody({ stage, stageRow, discovery, running, revising }: {
   stage: WorkflowStage
   stageRow?: ProjectStage
   discovery: DiscoveryData | null
+  running?: boolean
+  revising?: boolean
 }) {
   const status = stageRow?.status ?? 'pending'
   const content = stageRow?.content
+
+  if (running && stage !== 'discovery') {
+    return <AiWorking stage={stage} revising={revising} />
+  }
 
   if (stage === 'discovery') {
     if (!discovery) {
@@ -755,9 +823,7 @@ function StageBody({ stage, stageRow, discovery }: {
         </div>
       )}
 
-      {content.text && (
-        <div className="text-brand-300 text-sm font-body leading-relaxed whitespace-pre-wrap">{content.text}</div>
-      )}
+      {content.text && <Markdown>{content.text}</Markdown>}
 
       {content.sections?.map((section, si) => (
         <div key={si}>
