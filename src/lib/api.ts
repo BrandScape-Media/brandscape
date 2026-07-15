@@ -421,8 +421,27 @@ export async function listAssets(): Promise<MediaAsset[]> {
     .select('*, projects!inner(name)')
     .order('created_at', { ascending: false })
   if (error) throw error
-  return (data ?? []).map((row) => {
+  const assets: MediaAsset[] = (data ?? []).map((row) => {
     const { projects, ...rest } = row
     return { ...rest, project_name: projects?.name }
   })
+
+  // generated media lives on R2 (url = object key) — swap in short-lived
+  // view URLs; if the orchestrator is unreachable, show entries without previews
+  const r2Keys = assets.filter((a) => a.url?.startsWith('generated/')).map((a) => a.url)
+  if (r2Keys.length > 0) {
+    try {
+      const urls = await getAssetViewUrls(r2Keys)
+      assets.forEach((a) => {
+        const signed = urls[a.url]
+        if (signed) {
+          if (a.type === 'image' && !a.thumbnail_url) a.thumbnail_url = signed
+          a.url = signed
+        }
+      })
+    } catch {
+      /* previews unavailable */
+    }
+  }
+  return assets
 }

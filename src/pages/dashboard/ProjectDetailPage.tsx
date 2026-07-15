@@ -318,7 +318,7 @@ export default function ProjectDetailPage() {
           <button
             onClick={() => handleRunAI(currentWorkflow.stage)}
             disabled={isRunning}
-            className="px-5 py-2.5 bg-white text-black font-heading font-bold text-sm rounded-lg hover:bg-brand-200 transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="ai-glow px-5 py-2.5 bg-white text-black font-heading font-bold text-sm rounded-lg hover:bg-brand-200 transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isRunning ? (
               <>
@@ -541,7 +541,7 @@ export default function ProjectDetailPage() {
                     )}
                     <button
                       onClick={() => handleRunAI(currentWorkflow.stage)}
-                      className="px-4 py-2.5 border border-white/15 text-white font-heading text-sm rounded-lg hover:border-white/30 hover:bg-white/[0.03] transition-all flex items-center gap-2"
+                      className="ai-glow ai-glow-soft px-4 py-2.5 bg-brand-950 border border-white/15 text-white font-heading text-sm rounded-lg hover:border-white/30 transition-all flex items-center gap-2"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -594,7 +594,7 @@ export default function ProjectDetailPage() {
                   <div className="flex flex-wrap items-center gap-3 w-full">
                     <button
                       onClick={() => handleRunAI(currentWorkflow.stage)}
-                      className="px-5 py-2.5 bg-white text-black font-heading font-bold text-sm rounded-lg hover:bg-brand-200 transition-all flex items-center gap-2"
+                      className="ai-glow px-5 py-2.5 bg-white text-black font-heading font-bold text-sm rounded-lg hover:bg-brand-200 transition-all flex items-center gap-2"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
@@ -615,7 +615,7 @@ export default function ProjectDetailPage() {
                   <div className="flex flex-wrap items-center gap-3 w-full">
                     <button
                       onClick={() => handleRunAI(currentWorkflow.stage)}
-                      className="px-5 py-2.5 bg-white text-black font-heading font-bold text-sm rounded-lg hover:bg-brand-200 transition-all flex items-center gap-2"
+                      className="ai-glow px-5 py-2.5 bg-white text-black font-heading font-bold text-sm rounded-lg hover:bg-brand-200 transition-all flex items-center gap-2"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
@@ -671,7 +671,8 @@ export default function ProjectDetailPage() {
           </div>
 
           {/* AI Chat */}
-          <div className={`bg-brand-900/30 border border-white/5 rounded-xl overflow-hidden transition-all ${chatOpen ? '' : 'max-h-16'}`}>
+          <div className="ai-glow ai-glow-soft rounded-xl">
+          <div className={`bg-brand-950 border border-white/5 rounded-xl overflow-hidden transition-all ${chatOpen ? '' : 'max-h-16'}`}>
             <button
               onClick={() => setChatOpen(!chatOpen)}
               className="w-full flex items-center justify-between px-5 py-4"
@@ -723,6 +724,7 @@ export default function ProjectDetailPage() {
                 </div>
               </div>
             )}
+          </div>
           </div>
         </div>
       </div>

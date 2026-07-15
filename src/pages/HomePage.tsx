@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { workflowStages } from '../data/workflow'
 import WorkflowIcon from '../components/WorkflowIcon'
+import DemoWindow from '../components/landing/DemoWindow'
+import ShowcaseGallery from '../components/landing/ShowcaseGallery'
 
 export default function HomePage() {
   const [email, setEmail] = useState('')
@@ -47,7 +49,7 @@ export default function HomePage() {
         <div className="absolute top-1/4 left-1/3 w-[600px] h-[600px] bg-white/[0.03] rounded-full blur-[160px]" />
         <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-white/[0.02] rounded-full blur-[120px]" />
 
-        <div className="relative z-10 max-w-6xl mx-auto px-6 lg:px-8 text-center pt-32 pb-20">
+        <div className="relative z-10 max-w-6xl mx-auto px-6 lg:px-8 text-center pt-36 pb-24">
           {/* Badge */}
           <div className="inline-flex items-center gap-2.5 px-5 py-2.5 border border-white/10 rounded-full text-brand-400 text-xs font-heading tracking-wider uppercase mb-10 animate-fade-in backdrop-blur-sm bg-white/[0.02]">
             <span className="relative flex h-2 w-2">
@@ -71,8 +73,9 @@ export default function HomePage() {
             className="font-body text-brand-400 text-lg md:text-xl max-w-2xl mx-auto mb-14 animate-slide-up leading-relaxed"
             style={{ animationDelay: '0.1s' }}
           >
-            From client discovery to final delivery — AI-powered research, strategy,
-            scripting, and content generation built exclusively for marketing agencies.
+            One pipeline turns a client brief into research, concepts, scripts, shoot
+            plans and finished raws — while your team supervises instead of producing.
+            Watch it run below.
           </p>
 
           {/* CTA */}
@@ -97,26 +100,21 @@ export default function HomePage() {
             </Link>
           </div>
 
+          {/* Live product demo — the pipeline running itself */}
+          <div className="mt-20 animate-slide-up" style={{ animationDelay: '0.3s' }}>
+            <DemoWindow />
+          </div>
+
           {/* Trust Badges */}
-          <div
-            className="mt-16 animate-slide-up flex flex-col items-center"
-            style={{ animationDelay: '0.3s' }}
-          >
+          <div className="mt-16 flex flex-col items-center">
             <p className="text-brand-600 text-xs font-heading tracking-widest uppercase mb-6">
               Built for agencies that ship fast
             </p>
             <div className="grid grid-cols-3 gap-x-12 gap-y-4 max-w-md">
               <TrustStat label="Production speed" value="10x" />
-              <TrustStat label="Pipeline stages" value="8-in-1" />
-              <TrustStat label="AI accuracy" value="95%" />
+              <TrustStat label="Cost per deliverable" value="−70%" />
+              <TrustStat label="One pipeline" value="6 stages" />
             </div>
-          </div>
-
-          {/* Scroll Indicator */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-            <svg className="w-5 h-5 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-            </svg>
           </div>
         </div>
       </section>
@@ -139,10 +137,31 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ===== SHOWCASE — creatives made by the pipeline ===== */}
+      <section id="showcase" className="py-28 bg-brand-black overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 mb-14">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+            <div>
+              <span className="font-heading text-xs tracking-[0.3em] uppercase text-brand-500 mb-4 block">
+                Showcase
+              </span>
+              <h2 className="font-heading font-black text-4xl md:text-5xl tracking-tight">
+                Made by the Pipeline.
+              </h2>
+            </div>
+            <p className="font-body text-brand-400 max-w-sm text-base md:text-right">
+              Stills and clips generated from real briefs — brand reference in,
+              ready-to-post creative out.
+            </p>
+          </div>
+        </div>
+        <ShowcaseGallery />
+      </section>
+
       {/* ===== FEATURES ===== */}
       <section id="features" className="py-32 bg-brand-950">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className={`text-center mb-24 transition-all duration-700 ${inView('features') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div className={`text-center mb-24 transition-all duration-700 ${inView('features-grid') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <span className="font-heading text-xs tracking-[0.3em] uppercase text-brand-500 mb-4 block">
               Platform
             </span>
@@ -158,7 +177,7 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-white/10 rounded-2xl overflow-hidden"
-            data-animate id="features">
+            data-animate id="features-grid">
             <FeatureCard
               title="Discovery Forms"
               description="Collect client info, budgets, timelines, and brand guidelines in structured intake forms that feed the entire pipeline."
@@ -173,38 +192,38 @@ export default function HomePage() {
             />
             <FeatureCard
               title="Ideation Engine"
-              description="Multiple creative angles, A/B concepts, and trend-aligned storylines generated by specialized AI models."
+              description="Creative angles, A/B concepts, and the strategy behind them — brand voice, KPIs, and funnel fit in one pass."
               icon="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
               delay={200}
             />
             <FeatureCard
-              title="Creative Strategy"
-              description="Brand voice alignment, tone guidelines, KPIs, and conversion funnel mapping — all AI-generated and editable."
-              icon="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              title="Script Writer"
+              description="Short-form and long-form scripts in the client's voice — edit by hand or tell the AI what to change in chat."
+              icon="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
               delay={300}
             />
             <FeatureCard
-              title="Script Writer"
-              description="Short-form (20-40s) and long-form (1-2m) scripts based on strategy and brand identity. Edit or request AI revisions."
-              icon="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              title="Shoot Planning"
+              description="Scene-by-scene breakdowns with A-roll, B-roll, and generation prompts derived from the approved scripts."
+              icon="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
               delay={0}
             />
             <FeatureCard
-              title="Shoot Planning"
-              description="Scene-by-scene breakdowns with A-roll and B-roll prompts. AI-selected music from Epidemic Sound."
-              icon="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+              title="Content Generation"
+              description="Stills and video clips generated on dedicated GPU infrastructure using the client's real product photos as reference."
+              icon="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
               delay={100}
             />
             <FeatureCard
-              title="Content Generation"
-              description="Images and video clips generated via ComfyUI on rented GPU infrastructure. Stripped and tagged with custom metadata."
-              icon="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+              title="Client Share Links"
+              description="Send clients a private gallery — they comment with video timestamps, you resolve. No accounts, no email chains."
+              icon="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
               delay={200}
             />
             <FeatureCard
-              title="Auto Editing"
-              description="Automated assembly with music overlay, voiceover sync, and final deliverable export — ready for client delivery."
-              icon="M13 10V3L4 14h7v7l9-11h-7z"
+              title="Brand Library"
+              description="Every upload and every generated asset organized per client, with storage quotas and clean custom metadata."
+              icon="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
               delay={300}
             />
           </div>
@@ -217,12 +236,12 @@ export default function HomePage() {
         <div className="absolute bottom-1/4 right-1/3 w-[500px] h-[400px] bg-white/[0.03] rounded-full blur-[160px]" />
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8">
-          <div className={`text-center mb-24 transition-all duration-700 ${inView('workflow') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div className={`text-center mb-24 transition-all duration-700 ${inView('workflow-grid') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <span className="font-heading text-xs tracking-[0.3em] uppercase text-brand-500 mb-4 block">
               Workflow
             </span>
             <h2 className="font-heading font-black text-4xl md:text-5xl lg:text-6xl tracking-tight mb-6">
-              Eight Steps.
+              Six Stages.
               <br />
               Zero Friction.
             </h2>
@@ -233,11 +252,11 @@ export default function HomePage() {
           </div>
 
           {/* Pipeline */}
-          <div data-animate id="workflow" className="relative">
+          <div data-animate id="workflow-grid" className="relative">
             {/* Connecting Line — Desktop */}
             <div className="hidden lg:block absolute top-12 left-[5%] right-[5%] h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4 lg:gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 lg:gap-3">
               {workflowStages.map((stage, i) => (
                 <div
                   key={stage.stage}
@@ -460,16 +479,32 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ===== TESTIMONIALS ===== */}
-      <section className="py-32 bg-brand-black">
+      {/* ===== WINS ===== */}
+      <section id="wins" className="py-32 bg-brand-black">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="text-center mb-20">
+          <div className="text-center mb-16">
             <span className="font-heading text-xs tracking-[0.3em] uppercase text-brand-500 mb-4 block">
-              Early Feedback
+              Client Wins
             </span>
             <h2 className="font-heading font-black text-4xl md:text-5xl tracking-tight">
-              What Agencies Say
+              The Numbers Agencies Care About
             </h2>
+          </div>
+
+          {/* Result stats */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-20">
+            {[
+              { value: '−70%', label: 'Cost per deliverable', note: 'vs. traditional production' },
+              { value: '6 hrs', label: 'Brief to first raws', note: 'was 5 business days' },
+              { value: '3.4×', label: 'Concepts tested per campaign', note: 'more angles, same budget' },
+              { value: '40+', label: 'Campaigns shipped', note: 'through the pipeline in beta' },
+            ].map((s, i) => (
+              <div key={i} className="bg-brand-900/30 border border-white/5 rounded-2xl p-7 text-center hover:border-white/10 transition-colors">
+                <p className="font-heading font-black text-4xl md:text-5xl text-transparent bg-clip-text bg-gradient-to-br from-white to-brand-400 mb-2">{s.value}</p>
+                <p className="font-heading font-semibold text-xs text-brand-300 tracking-wide uppercase">{s.label}</p>
+                <p className="text-brand-600 text-[11px] font-body mt-1.5">{s.note}</p>
+              </div>
+            ))}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -507,8 +542,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ===== FINAL CTA ===== */}
-      <section className="py-32 bg-brand-950 relative overflow-hidden">
+      {/* ===== FINAL CTA / CONTACT ===== */}
+      <section id="contact" className="py-32 bg-brand-950 relative overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-white/[0.02] rounded-full blur-[200px]" />
           <div
@@ -567,6 +602,12 @@ export default function HomePage() {
 
           <p className="text-brand-700 text-xs font-body mt-6">
             Free 14-day trial • No credit card required • Cancel anytime
+          </p>
+          <p className="text-brand-600 text-xs font-body mt-3">
+            Prefer talking to a human?{' '}
+            <a href="mailto:hello@brandscape.media" className="text-brand-400 hover:text-white underline underline-offset-2 transition-colors">
+              hello@brandscape.media
+            </a>
           </p>
         </div>
       </section>
@@ -652,7 +693,7 @@ function FooterSection() {
               Modules
             </h4>
             <ul className="space-y-2.5">
-              {['Research AI', 'Ideation Engine', 'Script Writer', 'Content Generator', 'Auto Editor'].map((m) => (
+              {['Research AI', 'Ideation Engine', 'Script Writer', 'Content Generator', 'Client Share Links'].map((m) => (
                 <li key={m}><span className="text-brand-600 text-xs font-body">{m}</span></li>
               ))}
             </ul>
@@ -664,9 +705,10 @@ function FooterSection() {
               Company
             </h4>
             <ul className="space-y-2.5">
-              <li><a href="mailto:hello@brandscape.media" className="text-brand-600 hover:text-brand-300 text-xs font-body transition-colors">Contact</a></li>
-              <li><a href="#" className="text-brand-600 hover:text-brand-300 text-xs font-body transition-colors">Privacy</a></li>
-              <li><a href="#" className="text-brand-600 hover:text-brand-300 text-xs font-body transition-colors">Terms</a></li>
+              <li><Link to="/#contact" className="text-brand-600 hover:text-brand-300 text-xs font-body transition-colors">Contact</Link></li>
+              {/* real static pages in public/ — full page loads, not SPA routes */}
+              <li><a href="/privacy/" className="text-brand-600 hover:text-brand-300 text-xs font-body transition-colors">Privacy</a></li>
+              <li><a href="/terms/" className="text-brand-600 hover:text-brand-300 text-xs font-body transition-colors">Terms</a></li>
             </ul>
           </div>
 

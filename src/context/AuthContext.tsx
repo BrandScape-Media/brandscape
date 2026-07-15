@@ -54,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           avatar_url: session.user.user_metadata?.avatar_url,
           agency_id: profile?.agency_id,
           role: profile?.role ?? 'member',
+          platform_admin: profile?.platform_admin === true,
           created_at: session.user.created_at,
         })
       } catch {

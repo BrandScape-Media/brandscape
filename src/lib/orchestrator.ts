@@ -92,3 +92,99 @@ export async function getAssetViewUrls(keys: string[]): Promise<Record<string, s
 export async function deleteAssetObject(key: string): Promise<void> {
   await orThrow(await post('/v1/assets/delete-object', { key }))
 }
+
+// ===== Platform admin (Brandscape staff QC — cross-agency) =====
+
+async function get(path: string): Promise<Response> {
+  const headers = await authHeader()
+  return fetch(`${API_URL}${path}`, { headers })
+}
+
+export interface AdminProjectSummary {
+  id: string
+  name: string
+  archived: boolean
+  current_stage: string
+  updated_at: string
+  agency_name: string
+  client_name: string
+}
+
+export interface AdminStage {
+  stage: string
+  status: string
+  content: { text?: string; prompt_summary?: string } | null
+  completed_at: string | null
+}
+
+export interface AdminMedia {
+  id: string
+  type: 'image' | 'video' | 'audio'
+  status: string
+  url: string
+  view_url: string | null
+  metadata?: { name?: string; source?: string } | null
+  file_size?: number | null
+  created_at: string
+}
+
+export interface AdminProjectDetail {
+  id: string
+  name: string
+  agency_id: string
+  agency_name: string
+  client_name: string
+  archived: boolean
+  current_stage: string
+  stages: AdminStage[]
+  media: AdminMedia[]
+}
+
+export async function adminListProjects(): Promise<AdminProjectSummary[]> {
+  const res = await orThrow(await get('/v1/admin/projects'))
+  return (await res.json()).projects ?? []
+}
+
+export async function adminGetProject(projectId: string): Promise<AdminProjectDetail> {
+  const res = await orThrow(await get(`/v1/admin/projects/${projectId}`))
+  return res.json()
+}
+
+export async function adminOverrideStage(
+  projectId: string,
+  stage: string,
+  patch: { status?: string; text?: string },
+): Promise<void> {
+  await orThrow(await post(`/v1/admin/projects/${projectId}/stages/${stage}/override`, patch))
+}
+
+/** Upload a file so it appears in the project's library as AI-generated media. */
+export async function adminUploadMedia(
+  projectId: string,
+  file: File,
+  type: 'image' | 'video' | 'audio',
+): Promise<void> {
+  const contentType = file.type || 'application/octet-stream'
+  const presignRes = await orThrow(
+    await post(`/v1/admin/projects/${projectId}/media/presign`, {
+      fileName: file.name,
+      contentType,
+      sizeBytes: file.size,
+    }),
+  )
+  const { url, key } = await presignRes.json()
+  const putRes = await fetch(url, { method: 'PUT', headers: { 'Content-Type': contentType }, body: file })
+  if (!putRes.ok) throw new Error(`Upload to storage failed (${putRes.status})`)
+  await orThrow(
+    await post(`/v1/admin/projects/${projectId}/media/record`, {
+      key,
+      type,
+      fileName: file.name,
+      sizeBytes: file.size,
+    }),
+  )
+}
+
+export async function adminDeleteMedia(assetId: string): Promise<void> {
+  await orThrow(await post(`/v1/admin/media/${assetId}/delete`))
+}

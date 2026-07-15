@@ -213,7 +213,7 @@ select:-webkit-autofill {
 }
 /* shimmering "AI WORKING" badge text */
 .bs-working-badge {
-  background: linear-gradient(90deg, #93c5fd 0%, #d8b4fe 40%, #ffffff 50%, #d8b4fe 60%, #93c5fd 100%);
+  background: linear-gradient(90deg, #93c5fd 0%, #d8b4fe 30%, #f9a8d4 45%, #ffffff 50%, #f9a8d4 55%, #d8b4fe 70%, #93c5fd 100%);
   background-size: 220% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -227,6 +227,89 @@ select:-webkit-autofill {
 @media (prefers-reduced-motion: reduce) {
   .bs-panel-sweep, .bs-ring, .bs-core, .bs-ghost-line, .bs-caret, .bs-working-badge { animation: none; }
   .bs-ghost-line { transform: none; opacity: 1; }
+}
+
+/* ===== AI rainbow glow (marks every AI-powered control) ===== */
+@property --ai-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+.ai-glow {
+  position: relative;
+  z-index: 0;
+}
+.ai-glow::before,
+.ai-glow::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  z-index: -1;
+  background: conic-gradient(
+    from var(--ai-angle, 0deg),
+    #5ea2ef, #8b7bf7, #e06ec5, #f6a23c, #4ec9a8, #5ea2ef
+  );
+  animation: ai-spin 5s linear infinite;
+}
+.ai-glow::after {
+  filter: blur(16px);
+  opacity: 0.45;
+}
+@keyframes ai-spin {
+  to { --ai-angle: 360deg; }
+}
+/* soft variant for panels: thin ring, gentle bloom */
+.ai-glow-soft::before { inset: -1px; opacity: 0.55; }
+.ai-glow-soft::after { opacity: 0.16; filter: blur(20px); }
+/* rainbow core for the working indicator */
+.bs-core--ai {
+  background: conic-gradient(from 0deg, #5ea2ef, #8b7bf7, #e06ec5, #f6a23c, #4ec9a8, #5ea2ef);
+  box-shadow: 0 0 20px rgba(139, 123, 247, 0.6);
+}
+
+/* ===== Landing: showcase marquee ===== */
+.marquee {
+  display: flex;
+  gap: 1.25rem;
+  width: max-content;
+  animation: marquee-scroll 46s linear infinite;
+}
+.marquee:hover { animation-play-state: paused; }
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* ===== Landing: live demo window ===== */
+.demo-line {
+  animation: demo-line-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes demo-line-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.demo-thumb {
+  animation: demo-thumb-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes demo-thumb-in {
+  from { opacity: 0; transform: scale(0.86); }
+  to { opacity: 1; transform: scale(1); }
+}
+.demo-window-enter {
+  animation: demo-window-in 1s cubic-bezier(0.16, 0.84, 0.3, 1) both;
+}
+@keyframes demo-window-in {
+  from { opacity: 0; transform: perspective(1200px) rotateX(9deg) translateY(36px); }
+  to { opacity: 1; transform: perspective(1200px) rotateX(0deg) translateY(0); }
+}
+/* anchored sections clear the fixed navbar */
+section[id] { scroll-margin-top: 88px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-glow::before, .ai-glow::after { animation: none; }
+  .marquee { animation: none; }
+  .demo-line, .demo-thumb, .demo-window-enter { animation: none; }
 }
 
 /* ===== Scrollbar ===== */

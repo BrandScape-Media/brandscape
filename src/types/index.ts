@@ -6,6 +6,8 @@ export interface User {
   avatar_url?: string
   agency_id?: string
   role: 'owner' | 'admin' | 'member'
+  /** Brandscape staff: cross-agency QC via the orchestrator admin routes */
+  platform_admin?: boolean
   created_at: string
 }
 

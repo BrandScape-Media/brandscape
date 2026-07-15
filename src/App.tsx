@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Navbar from './components/Navbar'
 import HomePage from './pages/HomePage'
@@ -15,6 +16,28 @@ import ProjectDetailPage from './pages/dashboard/ProjectDetailPage'
 import ClientsPage from './pages/dashboard/ClientsPage'
 import LibraryPage from './pages/dashboard/LibraryPage'
 import SettingsPage from './pages/dashboard/SettingsPage'
+import AdminPage from './pages/dashboard/AdminPage'
+
+/**
+ * React Router doesn't scroll to URL hashes — this makes nav/footer anchor
+ * links (/#features, /#contact, …) actually work, and resets scroll on
+ * normal page changes.
+ */
+function ScrollManager() {
+  const { pathname, hash } = useLocation()
+  useEffect(() => {
+    if (hash) {
+      // no explicit behavior: html { scroll-behavior: smooth } animates it
+      const scroll = () => document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'start' })
+      // element may not be mounted yet when arriving from another page
+      if (document.getElementById(hash.slice(1))) scroll()
+      else requestAnimationFrame(scroll)
+    } else {
+      window.scrollTo(0, 0)
+    }
+  }, [pathname, hash])
+  return null
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -38,6 +61,7 @@ function LoadingScreen() {
 function AppRouter() {
   return (
     <BrowserRouter>
+      <ScrollManager />
       <div className="min-h-screen bg-brand-black text-brand-white">
         <Routes>
           {/* Public routes */}
@@ -68,6 +92,7 @@ function AppRouter() {
             <Route path="clients" element={<ClientsPage />} />
             <Route path="library" element={<LibraryPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="admin" element={<AdminPage />} />
           </Route>
 
           {/* Catch-all redirect */}

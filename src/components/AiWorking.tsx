@@ -70,7 +70,7 @@ export default function AiWorking({ stage, revising }: { stage: WorkflowStage; r
         <div className="relative w-14 h-14 mb-5 flex items-center justify-center">
           <span className="bs-ring absolute inset-0 rounded-full border border-blue-400/40" />
           <span className="bs-ring absolute inset-0 rounded-full border border-purple-400/30" style={{ animationDelay: '0.9s' }} />
-          <span className="w-3.5 h-3.5 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 bs-core" />
+          <span className="w-3.5 h-3.5 rounded-full bs-core bs-core--ai" />
         </div>
 
         <p className="font-heading font-bold text-sm text-white tracking-wide mb-1.5">
