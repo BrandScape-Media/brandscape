@@ -188,3 +188,62 @@ export async function adminUploadMedia(
 export async function adminDeleteMedia(assetId: string): Promise<void> {
   await orThrow(await post(`/v1/admin/media/${assetId}/delete`))
 }
+
+// ===== AI Playground (staff testbed: LLM + web tools + voice) =====
+
+export interface OrchestratorHealth {
+  ok: boolean
+  llm_configured: boolean
+  r2_configured: boolean
+  tts_configured: boolean
+  search_configured: boolean
+}
+
+/** Public health probe — null when the orchestrator is unreachable. */
+export async function getOrchestratorHealth(): Promise<OrchestratorHealth | null> {
+  try {
+    const res = await fetch(`${API_URL}/health`)
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
+}
+
+export interface PlaygroundToolCall {
+  tool: string
+  args: Record<string, unknown>
+  ok: boolean
+}
+
+export interface PlaygroundReply {
+  reply: string
+  tool_trace: PlaygroundToolCall[]
+}
+
+/** Chat with the production LLM; it can search the live web while answering. */
+export async function adminChat(
+  messages: { role: 'user' | 'assistant'; content: string }[],
+  useTools = true,
+): Promise<PlaygroundReply> {
+  const res = await orThrow(await post('/v1/admin/chat', { messages, use_tools: useTools }))
+  return res.json()
+}
+
+export interface TtsVoice {
+  voice_id: string
+  name: string
+  category: string | null
+  preview_url: string | null
+}
+
+export async function adminListVoices(): Promise<{ configured: boolean; voices: TtsVoice[] }> {
+  const res = await orThrow(await get('/v1/admin/voices'))
+  return res.json()
+}
+
+/** Generate a test voiceover clip; resolves to an MP3 blob. */
+export async function adminTts(text: string, voiceId?: string): Promise<Blob> {
+  const res = await orThrow(await post('/v1/admin/tts', { text, ...(voiceId ? { voice_id: voiceId } : {}) }))
+  return res.blob()
+}

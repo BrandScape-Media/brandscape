@@ -10,6 +10,7 @@ import {
   type AdminProjectDetail,
 } from '../../lib/orchestrator'
 import { timeAgo, formatBytes } from '../../lib/format'
+import AdminPlayground from './AdminPlayground'
 
 /**
  * Platform-admin mission control (Brandscape staff only): human QC across
@@ -29,6 +30,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default function AdminPage() {
   const { user } = useAuth()
+  const [tab, setTab] = useState<'projects' | 'playground'>('projects')
   const [projects, setProjects] = useState<AdminProjectSummary[] | null>(null)
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -84,6 +86,28 @@ export default function AdminPage() {
         Human QC across all agencies — override stages, curate generated media, act as the AI.
       </p>
 
+      {/* Tabs */}
+      <div className="flex items-center gap-1.5 mb-6 border-b border-white/5">
+        {(
+          [
+            { id: 'projects', label: 'Projects & QC' },
+            { id: 'playground', label: 'AI Playground' },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`px-4 py-2.5 font-heading font-semibold text-xs tracking-wide rounded-t-lg border-b-2 transition-colors ${
+              tab === t.id
+                ? 'text-white border-violet-400'
+                : 'text-brand-500 border-transparent hover:text-brand-300'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       {error && (
         <div className="mb-4 px-4 py-3 bg-red-500/5 border border-red-500/15 rounded-lg flex items-center justify-between gap-4">
           <p className="text-red-400 text-xs font-body">{error}</p>
@@ -97,6 +121,9 @@ export default function AdminPage() {
         </div>
       )}
 
+      {tab === 'playground' ? (
+        <AdminPlayground />
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Project picker */}
         <div className="bg-brand-900/30 border border-white/5 rounded-xl overflow-hidden">
@@ -163,6 +190,7 @@ export default function AdminPage() {
           )}
         </div>
       </div>
+      )}
     </div>
   )
 }

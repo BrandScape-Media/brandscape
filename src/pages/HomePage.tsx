@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { workflowStages } from '../data/workflow'
 import WorkflowIcon from '../components/WorkflowIcon'
 import DemoWindow from '../components/landing/DemoWindow'
 import ShowcaseGallery from '../components/landing/ShowcaseGallery'
+import PartnerMarquee from '../components/landing/PartnerMarquee'
+import CountUp from '../components/landing/CountUp'
+import useInViewOnce from '../lib/useInViewOnce'
 
 export default function HomePage() {
   const [email, setEmail] = useState('')
@@ -75,9 +78,9 @@ export default function HomePage() {
               className="font-body text-brand-400 text-lg md:text-xl max-w-2xl mx-auto mb-14 animate-slide-up leading-relaxed"
               style={{ animationDelay: '0.1s' }}
             >
-              One pipeline turns a client brief into research, concepts, scripts, shoot
-              plans and finished raws — while your team supervises instead of producing.
-              This is what it makes.
+              Send in a client brief. Brandscape comes back with the research, the
+              concepts, the scripts, the shoot plan — and finished creatives like the
+              ones below. Your team approves the work instead of producing it.
             </p>
 
             {/* CTA */}
@@ -117,29 +120,30 @@ export default function HomePage() {
               Built for agencies that ship fast
             </p>
             <div className="grid grid-cols-3 gap-x-12 gap-y-4 max-w-md">
-              <TrustStat label="Production speed" value="10x" accent="from-sky-300 to-cyan-300" />
-              <TrustStat label="Cost per deliverable" value="−70%" accent="from-emerald-300 to-teal-300" />
-              <TrustStat label="Your SOP, on autopilot" value="Automated" accent="from-violet-300 to-fuchsia-300" />
+              <TrustStat label="Production speed" accent="from-sky-300 to-cyan-300">
+                <CountUp to={10} suffix="x" />
+              </TrustStat>
+              <TrustStat label="Cost per deliverable" accent="from-emerald-300 to-teal-300">
+                <CountUp to={70} prefix="−" suffix="%" />
+              </TrustStat>
+              <TrustStat label="More profit per project" accent="from-violet-300 to-fuchsia-300">
+                <CountUp to={2.3} decimals={1} suffix="×" />
+              </TrustStat>
             </div>
           </div>
         </div>
       </section>
 
       {/* ===== TRUSTED BY / LOGOS ===== */}
-      <section className="py-20 bg-brand-900/40 border-y border-white/5">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <p className="text-center text-brand-600 text-xs font-heading tracking-[0.3em] uppercase mb-10">
+      <section className="relative py-20 bg-brand-900/40 border-y border-white/5 overflow-hidden">
+        {/* soft glow bleeding in from the top of the band */}
+        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-white/[0.05] to-transparent pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-32 bg-white/[0.04] rounded-full blur-[90px] pointer-events-none" />
+        <div className="relative max-w-7xl mx-auto">
+          <p className="text-center text-brand-600 text-xs font-heading tracking-[0.3em] uppercase mb-10 px-6">
             Trusted by forward-thinking agencies worldwide
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-x-16 gap-y-8 opacity-40">
-            {['Voyager', 'Ember Studio', 'North Peak', 'Atlas Creative', 'Signal', 'Meridian'].map(
-              (name) => (
-                <span key={name} className="font-heading font-bold text-xl text-brand-400 tracking-wide select-none">
-                  {name}
-                </span>
-              )
-            )}
-          </div>
+          <PartnerMarquee />
         </div>
       </section>
 
@@ -454,13 +458,13 @@ export default function HomePage() {
               </p>
               <div className="space-y-4">
                 {[
-                  { label: 'Dedicated GPU Compute', desc: 'Enterprise GPUs spun up on demand for every generation job — no shared queues', color: 'from-emerald-400 to-teal-400' },
-                  { label: 'Proprietary Generation Pipeline', desc: 'Our own image & video engine, guided by each client’s real product photos and brand kit', color: 'from-sky-400 to-blue-400' },
-                  { label: 'Specialized AI Models', desc: 'Every pipeline stage runs a purpose-built model tuned for that job', color: 'from-violet-400 to-purple-400' },
-                  { label: 'Clean Metadata', desc: 'Assets are stripped of generation data and tagged with your custom metadata', color: 'from-rose-400 to-pink-400' },
+                  { label: 'Dedicated GPU Compute', desc: 'Enterprise GPUs spun up on demand for every generation job — no shared queues' },
+                  { label: 'Proprietary Generation Pipeline', desc: 'Our own image & video engine, guided by each client’s real product photos and brand kit' },
+                  { label: 'Specialized AI Models', desc: 'Every pipeline stage runs a purpose-built model tuned for that job' },
+                  { label: 'Clean Metadata', desc: 'Assets are stripped of generation data and tagged with your custom metadata' },
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-4">
-                    <div className={`w-6 h-6 rounded-md bg-gradient-to-br ${item.color} flex items-center justify-center flex-shrink-0 mt-0.5`}>
+                    <div className="w-6 h-6 rounded-md bg-white/[0.08] border border-white/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                       </svg>
@@ -483,12 +487,7 @@ export default function HomePage() {
                   <div className="w-3 h-3 rounded-full bg-green-500/60" />
                   <span className="text-brand-600 text-xs font-heading ml-2">brandscape.pipeline</span>
                 </div>
-                {['Client Discovery → Database', 'Research AI → Report', 'Ideation AI → Concepts', 'Script AI → Scripts', 'Shoot Plan AI → Prompts', 'Generation Engine → Stills', 'Generation Engine → Clips', 'Client Gallery → Delivery'].map((line, i) => (
-                  <div key={i} className="flex items-center gap-3 font-mono text-xs">
-                    <span className="text-brand-700 w-5 text-right">{i + 1}.</span>
-                    <span className={i >= 5 ? 'text-transparent bg-clip-text bg-gradient-to-r from-sky-300 to-violet-300 font-semibold' : 'text-brand-500'}>{line}</span>
-                  </div>
-                ))}
+                <TypewriterLines />
                 <div className="pt-4 border-t border-white/5 flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                   <span className="text-green-500/80 text-xs font-heading">Pipeline Active</span>
@@ -515,13 +514,15 @@ export default function HomePage() {
           {/* Result stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-20">
             {[
-              { value: '−70%', label: 'Cost per deliverable', note: 'vs. traditional production' },
-              { value: '6 hrs', label: 'Brief to first raws', note: 'was 5 business days' },
-              { value: '3.4×', label: 'Concepts tested per campaign', note: 'more angles, same budget' },
-              { value: '40+', label: 'Campaigns shipped', note: 'through the pipeline in beta' },
+              { to: 70, prefix: '−', suffix: '%', decimals: 0, label: 'Cost per deliverable', note: 'vs. traditional production' },
+              { to: 6, prefix: '', suffix: ' hrs', decimals: 0, label: 'Brief to first raws', note: 'was 5 business days' },
+              { to: 3.4, prefix: '', suffix: '×', decimals: 1, label: 'Concepts tested per campaign', note: 'more angles, same budget' },
+              { to: 40, prefix: '', suffix: '+', decimals: 0, label: 'Campaigns shipped', note: 'through the pipeline in beta' },
             ].map((s, i) => (
               <div key={i} className="bg-brand-900/30 border border-white/5 rounded-2xl p-7 text-center hover:border-white/10 transition-colors">
-                <p className="font-heading font-black text-4xl md:text-5xl text-transparent bg-clip-text bg-gradient-to-br from-white to-brand-400 mb-2">{s.value}</p>
+                <p className="font-heading font-black text-4xl md:text-5xl text-transparent bg-clip-text bg-gradient-to-br from-white to-brand-400 mb-2">
+                  <CountUp to={s.to} prefix={s.prefix} suffix={s.suffix} decimals={s.decimals} />
+                </p>
                 <p className="font-heading font-semibold text-xs text-brand-300 tracking-wide uppercase">{s.label}</p>
                 <p className="text-brand-600 text-[11px] font-body mt-1.5">{s.note}</p>
               </div>
@@ -639,13 +640,87 @@ export default function HomePage() {
   )
 }
 
-function TrustStat({ label, value, accent }: { label: string; value: string; accent?: string }) {
+const PIPELINE_LINES = [
+  'Client Discovery → Database',
+  'Research AI → Report',
+  'Ideation AI → Concepts',
+  'Script AI → Scripts',
+  'Shoot Plan AI → Prompts',
+  'Generation Engine → Stills',
+  'Generation Engine → Clips',
+  'Client Gallery → Delivery',
+]
+
+/**
+ * The infra window writes itself out like a streaming AI response — starts
+ * when scrolled into view, holds when finished, then loops. Interval-driven
+ * (not rAF) so it also plays in throttled embedded browsers. Hidden text is
+ * rendered transparent so the window never changes height.
+ */
+function TypewriterLines() {
+  const total = PIPELINE_LINES.reduce((n, l) => n + l.length, 0)
+  const [shown, setShown] = useState(0)
+  const { ref, inView } = useInViewOnce<HTMLDivElement>()
+  const started = useRef(false)
+
+  useEffect(() => {
+    if (!inView || started.current) return
+    started.current = true
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setShown(total)
+      return
+    }
+    let n = 0
+    let hold = 0
+    const timer = window.setInterval(() => {
+      if (n >= total) {
+        // fully typed — hold ~4.5s, then start over
+        hold += 1
+        if (hold > 56) {
+          n = 0
+          hold = 0
+          setShown(0)
+        }
+        return
+      }
+      n = Math.min(n + 7, total) // ~85 chars/s — streaming-AI pace
+      setShown(n)
+    }, 80)
+    return () => clearInterval(timer)
+  }, [inView, total])
+
+  let offset = 0
+  const done = shown >= total
+  return (
+    <div ref={ref} className="space-y-4">
+      {PIPELINE_LINES.map((line, i) => {
+        const start = offset
+        offset += line.length
+        const visible = Math.max(0, Math.min(line.length, shown - start))
+        const active = !done && shown >= start && shown < start + line.length
+        const caretHere = active || (done && i === PIPELINE_LINES.length - 1)
+        return (
+          <div key={i} className="flex items-center gap-3 font-mono text-xs">
+            <span className="text-brand-700 w-5 text-right">{visible > 0 ? `${i + 1}.` : ''}</span>
+            <span className={i >= 5 ? 'text-transparent bg-clip-text bg-gradient-to-r from-sky-300 to-violet-300 font-semibold' : 'text-brand-500'}>
+              {line.slice(0, visible)}
+              {caretHere && <span className="type-caret" aria-hidden />}
+              <span className="opacity-0" aria-hidden>{line.slice(visible)}</span>
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function TrustStat({ label, accent, children }: { label: string; accent?: string; children: React.ReactNode }) {
   return (
     <div>
       <div className={`font-heading font-black text-2xl md:text-3xl mb-1 whitespace-nowrap ${
         accent ? `text-transparent bg-clip-text bg-gradient-to-r ${accent}` : 'text-white'
       }`}>
-        {value}
+        {children}
       </div>
       <div className="text-brand-600 text-[10px] font-heading tracking-wider uppercase">{label}</div>
     </div>
@@ -655,7 +730,7 @@ function TrustStat({ label, value, accent }: { label: string; value: string; acc
 function FeatureCard({ title, description, icon, delay }: { title: string; description: string; icon: string; delay: number }) {
   return (
     <div
-      className="bg-brand-black p-8 group hover:bg-brand-900/40 transition-all duration-500 relative overflow-hidden"
+      className="ai-hover-card bg-brand-black p-8 group hover:bg-brand-900/40 transition-all duration-500 relative overflow-hidden"
       style={{ transitionDelay: `${delay}ms` }}
     >
       <div className="absolute top-0 right-0 w-32 h-32 bg-white/[0.01] rounded-full blur-[50px] group-hover:bg-white/[0.06] transition-all duration-700" />
@@ -675,12 +750,12 @@ function FeatureCard({ title, description, icon, delay }: { title: string; descr
 
 function HowItWorksCard({ step, title, description, detail }: { step: string; title: string; description: string; detail: string }) {
   return (
-    <div className="bg-brand-900/40 border border-white/10 rounded-2xl p-8 group hover:border-white/20 hover:bg-brand-900/60 transition-all duration-300 flex flex-col">
-      <span className="font-heading font-black text-6xl text-brand-700 mb-6 leading-none">{step}</span>
-      <h3 className="font-heading font-bold text-xl mb-4">{title}</h3>
-      <p className="text-brand-400 text-sm font-body leading-relaxed flex-1">{description}</p>
-      <div className="mt-6 pt-6 border-t border-white/5">
-        <p className="text-brand-600 text-xs font-body italic">{detail}</p>
+    <div className="bg-brand-900/40 border border-white/10 rounded-2xl p-8 group flex flex-col transition-all duration-300 hover:-translate-y-2 hover:border-white/30 hover:bg-brand-900/70 hover:shadow-[0_24px_60px_-20px_rgba(139,123,247,0.35)] cursor-default">
+      <span className="font-heading font-black text-6xl text-brand-700 mb-6 leading-none transition-colors duration-300 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-br group-hover:from-sky-300 group-hover:to-violet-300">{step}</span>
+      <h3 className="font-heading font-bold text-xl mb-4 transition-colors group-hover:text-white">{title}</h3>
+      <p className="text-brand-400 text-sm font-body leading-relaxed flex-1 transition-colors group-hover:text-brand-300">{description}</p>
+      <div className="mt-6 pt-6 border-t border-white/5 transition-colors group-hover:border-white/10">
+        <p className="text-brand-600 text-xs font-body italic transition-colors group-hover:text-brand-400">{detail}</p>
       </div>
     </div>
   )
