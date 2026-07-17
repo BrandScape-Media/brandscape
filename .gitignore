@@ -8,3 +8,6 @@ dist
 tsconfig.tsbuildinfo
 system-prompts/
 image-integration/
+
+# Claude session context - local only, never publish (public repo)
+CLAUDE.md
