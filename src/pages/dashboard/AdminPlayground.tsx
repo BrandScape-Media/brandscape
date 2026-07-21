@@ -4,10 +4,15 @@ import {
   adminChat,
   adminListVoices,
   adminTts,
+  adminComfyUploadInput,
+  adminComfyRun,
+  adminComfyGetRun,
   getOrchestratorHealth,
   type OrchestratorHealth,
   type PlaygroundToolCall,
   type TtsVoice,
+  type MediaWorkflow,
+  type BenchRun,
 } from '../../lib/orchestrator'
 
 /**
@@ -37,6 +42,7 @@ export default function AdminPlayground() {
         <ChatPanel llmReady={health?.llm_configured ?? true} />
         <VoicePanel ttsReady={health?.tts_configured ?? false} healthLoaded={health !== undefined} />
       </div>
+      <WorkflowBench comfyReady={health?.comfy_configured ?? false} healthLoaded={health !== undefined} />
     </div>
   )
 }
@@ -58,8 +64,16 @@ function StatusStrip({ health }: { health: OrchestratorHealth | null | undefined
       state: health?.tts_configured ? 'on' : 'off',
       note: health?.tts_configured ? 'ElevenLabs live' : 'Awaiting API key',
     },
-    { label: 'Image Gen', state: 'soon', note: 'GPU pipeline — not deployed yet' },
-    { label: 'Video Gen', state: 'soon', note: 'GPU pipeline — not deployed yet' },
+    {
+      label: 'Image Gen',
+      state: health?.comfy_configured ? 'on' : 'off',
+      note: health?.comfy_configured ? 'Product & composite workflows' : 'Awaiting COMFY_URL (tunnel)',
+    },
+    {
+      label: 'Video Gen',
+      state: health?.comfy_configured ? 'on' : 'off',
+      note: health?.comfy_configured ? 'B-roll & talking-head workflows' : 'Awaiting COMFY_URL (tunnel)',
+    },
   ]
   const styles = {
     on: 'bg-green-500/10 border-green-500/20 text-green-400',
@@ -323,6 +337,261 @@ function VoicePanel({ ttsReady, healthLoaded }: { ttsReady: boolean; healthLoade
           <p className="text-red-400 text-xs font-body">{error}</p>
         </div>
       )}
+    </div>
+  )
+}
+
+// ===== Freeform workflow bench: raw inputs → raw output, no scaffolding =====
+
+const WORKFLOW_META: Record<
+  MediaWorkflow,
+  { label: string; kind: 'image' | 'video'; needs2: boolean; needsAudio: boolean; hint: string }
+> = {
+  product: { label: 'Product photo (img2img)', kind: 'image', needs2: false, needsAudio: false, hint: 'One product image + a prompt.' },
+  composite: { label: 'Influencer + product', kind: 'image', needs2: true, needsAudio: false, hint: 'Two images (e.g. influencer + product) + a prompt.' },
+  broll: { label: 'B-roll (img2video)', kind: 'video', needs2: false, needsAudio: false, hint: 'A start frame + a motion prompt.' },
+  talkinghead: { label: 'Talking head (audio→video)', kind: 'video', needs2: false, needsAudio: true, hint: 'A start frame + an audio file. Video runs to the audio length.' },
+}
+
+const benchInput =
+  'w-full px-3 py-2.5 bg-brand-900 border border-white/10 rounded-lg text-white font-body text-sm placeholder:text-brand-700 focus:outline-none focus:border-white/30 transition-colors'
+
+function FilePick({
+  label,
+  file,
+  onPick,
+  accept,
+}: {
+  label: string
+  file: File | null
+  onPick: (f: File | null) => void
+  accept: string
+}) {
+  const url = useObjectUrl(file)
+  return (
+    <div>
+      <label className="block text-brand-500 text-[10px] font-heading tracking-wider uppercase mb-1.5">{label}</label>
+      <label className="flex items-center gap-3 px-3 py-2.5 bg-brand-900 border border-dashed border-white/15 rounded-lg cursor-pointer hover:border-white/30 transition-colors">
+        {url && accept.startsWith('image') ? (
+          <img src={url} alt="" className="w-10 h-10 rounded object-cover" />
+        ) : file ? (
+          <span className="w-10 h-10 rounded bg-brand-800 flex items-center justify-center text-[9px] font-heading text-brand-400">
+            {file.name.split('.').pop()?.toUpperCase()}
+          </span>
+        ) : (
+          <span className="w-10 h-10 rounded bg-brand-800/60 flex items-center justify-center text-brand-600 text-lg">+</span>
+        )}
+        <span className="text-xs font-body text-brand-300 truncate flex-1">{file ? file.name : 'Choose a file…'}</span>
+        <input type="file" accept={accept} className="hidden" onChange={(e) => onPick(e.target.files?.[0] ?? null)} />
+      </label>
+    </div>
+  )
+}
+
+function useObjectUrl(file: File | null): string | null {
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => {
+    if (!file) return setUrl(null)
+    const u = URL.createObjectURL(file)
+    setUrl(u)
+    return () => URL.revokeObjectURL(u)
+  }, [file])
+  return url
+}
+
+function WorkflowBench({ comfyReady, healthLoaded }: { comfyReady: boolean; healthLoaded: boolean }) {
+  const [workflow, setWorkflow] = useState<MediaWorkflow>('broll')
+  const [image, setImage] = useState<File | null>(null)
+  const [image2, setImage2] = useState<File | null>(null)
+  const [audio, setAudio] = useState<File | null>(null)
+  const [prompt, setPrompt] = useState('')
+  const [seed, setSeed] = useState('')
+  const [duration, setDuration] = useState('')
+  const [width, setWidth] = useState('')
+  const [height, setHeight] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [run, setRun] = useState<BenchRun | null>(null)
+  const [runId, setRunId] = useState<string | null>(null)
+  const [startedAt, setStartedAt] = useState(0)
+
+  const meta = WORKFLOW_META[workflow]
+
+  // Poll the active run
+  useEffect(() => {
+    if (!runId || (run && run.status !== 'running')) return
+    const timer = window.setInterval(async () => {
+      try {
+        setRun(await adminComfyGetRun(runId))
+      } catch {
+        /* keep polling */
+      }
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [runId, run])
+
+  const canRun =
+    comfyReady && !busy && image && (!meta.needs2 || image2) && (!meta.needsAudio || audio) && (meta.kind === 'image' ? prompt.trim() : true)
+
+  const go = async () => {
+    if (!image) return
+    setBusy(true)
+    setError(null)
+    setRun(null)
+    setRunId(null)
+    try {
+      const image_key = await adminComfyUploadInput(image)
+      const image_key_2 = meta.needs2 && image2 ? await adminComfyUploadInput(image2) : undefined
+      const audio_key = meta.needsAudio && audio ? await adminComfyUploadInput(audio) : undefined
+      const id = await adminComfyRun({
+        workflow,
+        image_key,
+        image_key_2,
+        audio_key,
+        ...(prompt.trim() ? { prompt: prompt.trim() } : {}),
+        ...(seed.trim() ? { seed: Number(seed) } : {}),
+        ...(meta.kind === 'video' && duration.trim() ? { duration_seconds: Number(duration) } : {}),
+        ...(width.trim() ? { width: Number(width) } : {}),
+        ...(height.trim() ? { height: Number(height) } : {}),
+      })
+      setRunId(id)
+      setStartedAt(Date.now())
+      setRun({ status: 'running', type: meta.kind, startedAt: Date.now() })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not start the run')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="ai-glow ai-glow-soft rounded-2xl">
+      <div className="bg-brand-950 rounded-2xl p-5">
+        <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+          <div>
+            <h3 className="font-heading font-semibold text-sm text-white">Workflow Bench</h3>
+            <p className="text-brand-600 text-[11px] font-body mt-0.5">
+              Fire any pipeline workflow at raw inputs — no project, no influencer. Outputs are scratch (not filed to a library).
+            </p>
+          </div>
+          <select value={workflow} onChange={(e) => setWorkflow(e.target.value as MediaWorkflow)} className="w-auto px-3 py-2 bg-brand-900 border border-white/10 rounded-lg text-white font-body text-xs focus:outline-none focus:border-white/30">
+            {(Object.keys(WORKFLOW_META) as MediaWorkflow[]).map((w) => (
+              <option key={w} value={w}>{WORKFLOW_META[w].label}</option>
+            ))}
+          </select>
+        </div>
+
+        {healthLoaded && !comfyReady && (
+          <div className="mb-4 px-4 py-3 bg-amber-500/[0.06] border border-amber-500/15 rounded-lg">
+            <p className="text-amber-400 text-xs font-body">
+              GPU offline — add <code className="bg-amber-500/10 px-1.5 py-0.5 rounded text-amber-300 font-mono">COMFY_URL</code> (the tunnel) in Railway and this bench goes live.
+            </p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="space-y-3">
+            <p className="text-brand-600 text-[11px] font-body">{meta.hint}</p>
+            <FilePick label={meta.kind === 'video' ? 'Start frame' : 'Image'} file={image} onPick={setImage} accept="image/*" />
+            {meta.needs2 && <FilePick label="Second image" file={image2} onPick={setImage2} accept="image/*" />}
+            {meta.needsAudio && <FilePick label="Audio (voiceover)" file={audio} onPick={setAudio} accept="audio/*" />}
+            <div>
+              <label className="block text-brand-500 text-[10px] font-heading tracking-wider uppercase mb-1.5">
+                Prompt{meta.kind === 'video' && meta.needsAudio ? ' (optional)' : ''}
+              </label>
+              <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} placeholder="Describe the shot…" className={`${benchInput} resize-none`} />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="block text-brand-500 text-[10px] font-heading tracking-wider uppercase mb-1.5">Seed</label>
+                <input value={seed} onChange={(e) => setSeed(e.target.value)} placeholder="random" inputMode="numeric" className={benchInput} />
+              </div>
+              {meta.kind === 'video' && (
+                <div>
+                  <label className="block text-brand-500 text-[10px] font-heading tracking-wider uppercase mb-1.5">Secs</label>
+                  <input value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="auto" inputMode="numeric" className={benchInput} />
+                </div>
+              )}
+              <div>
+                <label className="block text-brand-500 text-[10px] font-heading tracking-wider uppercase mb-1.5">Width</label>
+                <input value={width} onChange={(e) => setWidth(e.target.value)} placeholder="wf" inputMode="numeric" className={benchInput} />
+              </div>
+              <div>
+                <label className="block text-brand-500 text-[10px] font-heading tracking-wider uppercase mb-1.5">Height</label>
+                <input value={height} onChange={(e) => setHeight(e.target.value)} placeholder="wf" inputMode="numeric" className={benchInput} />
+              </div>
+            </div>
+            <p className="text-brand-700 text-[10px] font-body">Blank fields fall back to the workflow's own values.</p>
+
+            <BenchOutput run={run} startedAt={startedAt} />
+          </div>
+        </div>
+
+        <button
+          onClick={go}
+          disabled={!canRun}
+          className="ai-glow w-full mt-4 py-3 bg-white text-black font-heading font-bold text-sm tracking-wide rounded-xl hover:bg-brand-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          {busy ? 'Uploading…' : run?.status === 'running' ? 'Running…' : !comfyReady ? 'GPU OFFLINE' : 'RUN WORKFLOW'}
+        </button>
+        {error && <p className="text-red-400 text-xs font-body mt-2">{error}</p>}
+      </div>
+    </div>
+  )
+}
+
+function BenchOutput({ run, startedAt }: { run: BenchRun | null; startedAt: number }) {
+  const [, tick] = useState(0)
+  useEffect(() => {
+    if (run?.status !== 'running') return
+    const t = window.setInterval(() => tick((n) => n + 1), 1000)
+    return () => clearInterval(t)
+  }, [run?.status])
+
+  if (!run) {
+    return (
+      <div className="h-full min-h-32 rounded-lg border border-white/5 bg-brand-900/30 flex items-center justify-center">
+        <span className="text-brand-700 text-xs font-body">Output appears here</span>
+      </div>
+    )
+  }
+  if (run.status === 'running') {
+    const s = Math.max(0, Math.round((Date.now() - startedAt) / 1000))
+    return (
+      <div className="min-h-32 rounded-lg border border-blue-500/20 bg-blue-500/[0.04] flex flex-col items-center justify-center gap-2 py-6">
+        <div className="w-6 h-6 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" />
+        <span className="text-blue-300 text-xs font-heading tracking-wide">
+          RENDERING… {Math.floor(s / 60)}:{String(s % 60).padStart(2, '0')}
+        </span>
+      </div>
+    )
+  }
+  if (run.status === 'failed') {
+    return (
+      <div className="min-h-32 rounded-lg border border-red-500/20 bg-red-500/[0.04] p-3">
+        <p className="text-red-400 text-[11px] font-heading tracking-wide mb-1">FAILED</p>
+        <p className="text-red-400/80 text-[11px] font-body break-words">{run.error}</p>
+      </div>
+    )
+  }
+  return (
+    <div className="rounded-lg border border-white/10 bg-black overflow-hidden">
+      {run.type === 'video' ? (
+        <video src={run.view_url} controls playsInline className="w-full max-h-64" />
+      ) : run.type === 'image' ? (
+        <img src={run.view_url} alt="" className="w-full max-h-64 object-contain" />
+      ) : (
+        <audio src={run.view_url} controls className="w-full p-3" />
+      )}
+      <div className="px-3 py-2 flex items-center justify-between bg-brand-950">
+        <span className="text-brand-600 text-[10px] font-body">seed {run.seed}</span>
+        <a href={run.view_url} target="_blank" rel="noreferrer" download className="text-brand-300 hover:text-white text-[10px] font-heading tracking-wide">
+          DOWNLOAD ↓
+        </a>
+      </div>
     </div>
   )
 }

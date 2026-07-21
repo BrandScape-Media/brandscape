@@ -206,6 +206,7 @@ export interface OrchestratorHealth {
   r2_configured: boolean
   tts_configured: boolean
   search_configured: boolean
+  comfy_configured?: boolean
 }
 
 /** Public health probe — null when the orchestrator is unreachable. */
@@ -412,4 +413,49 @@ export interface AdminMediaAssetState {
 export async function adminGetMediaAsset(assetId: string): Promise<AdminMediaAssetState> {
   const res = await orThrow(await get(`/v1/admin/media/${assetId}`))
   return (await res.json()).asset
+}
+
+// ===== Freeform workflow bench (AI Playground) =====
+
+/** Upload a scratch input (image/audio) for a bench run; returns its key. */
+export async function adminComfyUploadInput(file: File): Promise<string> {
+  const contentType = file.type || 'application/octet-stream'
+  const presignRes = await orThrow(
+    await post('/v1/admin/comfy/upload', { fileName: file.name, contentType, sizeBytes: file.size }),
+  )
+  const { url, key } = await presignRes.json()
+  const putRes = await fetch(url, { method: 'PUT', headers: { 'Content-Type': contentType }, body: file })
+  if (!putRes.ok) throw new Error(`Upload failed (${putRes.status})`)
+  return key
+}
+
+export interface BenchRunInput {
+  workflow: MediaWorkflow
+  prompt?: string
+  image_key: string
+  image_key_2?: string
+  audio_key?: string
+  seed?: number
+  duration_seconds?: number
+  width?: number
+  height?: number
+}
+
+export async function adminComfyRun(input: BenchRunInput): Promise<string> {
+  const res = await orThrow(await post('/v1/admin/comfy/run', input))
+  return (await res.json()).run_id
+}
+
+export interface BenchRun {
+  status: 'running' | 'completed' | 'failed'
+  type: 'image' | 'video' | 'audio'
+  view_url?: string
+  seed?: number
+  error?: string
+  startedAt: number
+}
+
+export async function adminComfyGetRun(runId: string): Promise<BenchRun> {
+  const res = await orThrow(await get(`/v1/admin/comfy/run/${runId}`))
+  return (await res.json()).run
 }
