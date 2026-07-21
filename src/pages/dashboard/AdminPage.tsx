@@ -12,6 +12,7 @@ import {
 import { timeAgo, formatBytes } from '../../lib/format'
 import AdminPlayground from './AdminPlayground'
 import AdminInfluencers from './AdminInfluencers'
+import AdminMediaLab from './AdminMediaLab'
 
 /**
  * Platform-admin mission control (Brandscape staff only): human QC across
@@ -31,7 +32,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default function AdminPage() {
   const { user } = useAuth()
-  const [tab, setTab] = useState<'projects' | 'influencers' | 'playground'>('projects')
+  const [tab, setTab] = useState<'projects' | 'influencers' | 'medialab' | 'playground'>('projects')
   const [projects, setProjects] = useState<AdminProjectSummary[] | null>(null)
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -93,6 +94,7 @@ export default function AdminPage() {
           [
             { id: 'projects', label: 'Projects & QC' },
             { id: 'influencers', label: 'Influencers' },
+            { id: 'medialab', label: 'Media Lab' },
             { id: 'playground', label: 'AI Playground' },
           ] as const
         ).map((t) => (
@@ -125,6 +127,8 @@ export default function AdminPage() {
 
       {tab === 'playground' ? (
         <AdminPlayground />
+      ) : tab === 'medialab' ? (
+        <AdminMediaLab />
       ) : tab === 'influencers' ? (
         <AdminInfluencers />
       ) : (

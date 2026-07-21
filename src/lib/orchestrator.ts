@@ -352,3 +352,64 @@ export async function adminSetPrimaryInfluencerImage(imageId: string): Promise<v
 export async function adminDeleteInfluencerImage(imageId: string): Promise<void> {
   await orThrow(await post(`/v1/admin/influencer-images/${imageId}/delete`))
 }
+
+// ===== Media Lab (drives the ComfyUI GPU behind COMFY_URL) =====
+
+export interface ComfyGpu {
+  name: string
+  vram_total: number | null
+  vram_free: number | null
+}
+
+export interface ComfyStatus {
+  configured: boolean
+  reachable: boolean
+  comfyui_version?: string | null
+  gpu?: ComfyGpu | null
+  error?: string
+}
+
+export async function adminComfyStatus(): Promise<ComfyStatus> {
+  const res = await orThrow(await get('/v1/admin/comfy/status'))
+  return res.json()
+}
+
+export type MediaWorkflow = 'product' | 'composite' | 'broll' | 'talkinghead'
+
+export interface GenerateMediaInput {
+  workflow: MediaWorkflow
+  project_id: string
+  prompt?: string
+  influencer_id?: string
+  influencer_image_id?: string
+  image_key?: string
+  image_key_2?: string
+  vo_text?: string
+  voice_id?: string
+  duration_seconds?: number
+  width?: number
+  height?: number
+}
+
+/** Queue a generation; poll the returned asset id for progress. */
+export async function adminGenerateMedia(input: GenerateMediaInput): Promise<string> {
+  const res = await orThrow(await post('/v1/admin/media/generate', input))
+  return (await res.json()).asset_id
+}
+
+export interface AdminMediaAssetState {
+  id: string
+  project_id: string
+  type: 'image' | 'video' | 'audio'
+  status: 'pending' | 'generating' | 'completed' | 'failed'
+  url: string
+  view_url: string | null
+  metadata?: Record<string, string> | null
+  file_size?: number | null
+  created_at: string
+}
+
+export async function adminGetMediaAsset(assetId: string): Promise<AdminMediaAssetState> {
+  const res = await orThrow(await get(`/v1/admin/media/${assetId}`))
+  return (await res.json()).asset
+}
