@@ -226,3 +226,16 @@ export interface MediaAsset {
   /** joined from projects(name) */
   project_name?: string
 }
+
+/** Internal agency-team feedback on a generated asset (media_comments table). */
+export interface MediaComment {
+  id: string
+  asset_id: string
+  author_id?: string | null
+  author_name?: string | null
+  body: string
+  /** for videos: the frame the note refers to, in whole seconds */
+  timestamp_seconds?: number | null
+  resolved: boolean
+  created_at: string
+}

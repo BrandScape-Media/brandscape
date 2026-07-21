@@ -8,6 +8,7 @@ import type {
   DiscoveryData,
   Job,
   MediaAsset,
+  MediaComment,
   Project,
   ProjectStage,
   ShareComment,
@@ -444,4 +445,48 @@ export async function listAssets(): Promise<MediaAsset[]> {
     }
   }
   return assets
+}
+
+// ===== Media comments (internal agency-team feedback on an asset) =====
+
+export async function listMediaComments(assetId: string): Promise<MediaComment[]> {
+  const { data, error } = await getSupabase()
+    .from('media_comments')
+    .select('*')
+    .eq('asset_id', assetId)
+    .order('created_at', { ascending: true })
+  if (error) throw error
+  return (data ?? []) as MediaComment[]
+}
+
+export async function addMediaComment(input: {
+  assetId: string
+  authorId: string
+  authorName: string
+  body: string
+  timestampSeconds?: number | null
+}): Promise<MediaComment> {
+  const { data, error } = await getSupabase()
+    .from('media_comments')
+    .insert({
+      asset_id: input.assetId,
+      author_id: input.authorId,
+      author_name: input.authorName,
+      body: input.body,
+      timestamp_seconds: input.timestampSeconds ?? null,
+    })
+    .select()
+    .single()
+  if (error) throw error
+  return data as MediaComment
+}
+
+export async function setMediaCommentResolved(id: string, resolved: boolean): Promise<void> {
+  const { error } = await getSupabase().from('media_comments').update({ resolved }).eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteMediaComment(id: string): Promise<void> {
+  const { error } = await getSupabase().from('media_comments').delete().eq('id', id)
+  if (error) throw error
 }

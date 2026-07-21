@@ -9,5 +9,9 @@ tsconfig.tsbuildinfo
 system-prompts/
 image-integration/
 
+# Influencer reference images = private generation assets, never in the
+# PUBLIC repo. The real library lives in Supabase + R2 (managed via admin).
+src/assets/Influencer-library/
+
 # Claude session context - local only, never publish (public repo)
 CLAUDE.md

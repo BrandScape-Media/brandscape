@@ -5,6 +5,7 @@ import { uploadClientAsset, deleteClientAsset } from '../../lib/api'
 import { timeAgo, formatBytes } from '../../lib/format'
 import { plans } from '../../data/plans'
 import { ConfirmDialog } from './ClientsPage'
+import MediaViewer from '../../components/dashboard/MediaViewer'
 import type { ClientAsset, ClientAssetKind, MediaAsset } from '../../types'
 
 type MediaType = 'all' | 'image' | 'video' | 'audio'
@@ -593,51 +594,7 @@ function GeneratedTab() {
       )}
 
       {/* Media viewer */}
-      {viewing && (
-        <div
-          className="fixed inset-0 z-50 bg-brand-950/90 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8"
-          onClick={() => setViewing(null)}
-        >
-          <div className="w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between gap-4 mb-3">
-              <div className="min-w-0">
-                <p className="font-heading font-semibold text-sm text-white truncate">
-                  {viewing.metadata?.name ?? `${viewing.type} asset`}
-                </p>
-                <p className="text-brand-600 text-xs font-body mt-0.5 truncate">{viewing.project_name ?? '—'}</p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <a
-                  href={viewing.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  download
-                  className="px-4 py-2 bg-white text-black font-heading font-bold text-[11px] tracking-wide rounded-lg hover:bg-brand-200 transition-colors"
-                >
-                  DOWNLOAD
-                </a>
-                <button
-                  onClick={() => setViewing(null)}
-                  className="px-3.5 py-2 border border-white/15 text-white font-heading font-bold text-[11px] tracking-wide rounded-lg hover:border-white/30 transition-colors"
-                >
-                  CLOSE
-                </button>
-              </div>
-            </div>
-            <div className="bg-brand-900/40 border border-white/10 rounded-2xl overflow-hidden flex items-center justify-center">
-              {viewing.type === 'image' ? (
-                <img src={viewing.url} alt="" className="max-h-[78vh] w-auto max-w-full object-contain" />
-              ) : viewing.type === 'video' ? (
-                <video src={viewing.url} controls autoPlay playsInline className="max-h-[78vh] w-auto max-w-full" />
-              ) : (
-                <div className="w-full p-10">
-                  <audio src={viewing.url} controls className="w-full" />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {viewing && <MediaViewer asset={viewing} onClose={() => setViewing(null)} />}
     </div>
   )
 }
