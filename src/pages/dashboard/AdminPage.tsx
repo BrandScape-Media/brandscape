@@ -11,6 +11,7 @@ import {
 } from '../../lib/orchestrator'
 import { timeAgo, formatBytes } from '../../lib/format'
 import AdminPlayground from './AdminPlayground'
+import AdminInfluencers from './AdminInfluencers'
 
 /**
  * Platform-admin mission control (Brandscape staff only): human QC across
@@ -30,7 +31,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default function AdminPage() {
   const { user } = useAuth()
-  const [tab, setTab] = useState<'projects' | 'playground'>('projects')
+  const [tab, setTab] = useState<'projects' | 'influencers' | 'playground'>('projects')
   const [projects, setProjects] = useState<AdminProjectSummary[] | null>(null)
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -91,6 +92,7 @@ export default function AdminPage() {
         {(
           [
             { id: 'projects', label: 'Projects & QC' },
+            { id: 'influencers', label: 'Influencers' },
             { id: 'playground', label: 'AI Playground' },
           ] as const
         ).map((t) => (
@@ -123,6 +125,8 @@ export default function AdminPage() {
 
       {tab === 'playground' ? (
         <AdminPlayground />
+      ) : tab === 'influencers' ? (
+        <AdminInfluencers />
       ) : (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Project picker */}
