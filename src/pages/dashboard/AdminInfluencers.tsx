@@ -28,6 +28,7 @@ export default function AdminInfluencers() {
   const [influencers, setInfluencers] = useState<Influencer[] | null>(null)
   const [voices, setVoices] = useState<TtsVoice[]>([])
   const [voicesConfigured, setVoicesConfigured] = useState(true)
+  const [voicesError, setVoicesError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [selected, setSelected] = useState<Influencer | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -41,7 +42,10 @@ export default function AdminInfluencers() {
         setVoices(res.voices)
         setVoicesConfigured(res.configured)
       })
-      .catch(() => setVoicesConfigured(false))
+      .catch((err) => {
+        setVoicesConfigured(false)
+        setVoicesError(err instanceof Error ? err.message : null)
+      })
   }, [])
 
   const replace = (inf: Influencer) => {
@@ -75,8 +79,17 @@ export default function AdminInfluencers() {
       {!voicesConfigured && (
         <div className="mb-4 px-4 py-3 bg-amber-500/5 border border-amber-500/15 rounded-lg">
           <p className="text-amber-300/90 text-xs font-body">
-            Voice list unavailable (ElevenLabs not reachable) — you can still create influencers and assign voices later.
+            Voice list unavailable — you can still create influencers and assign voices later.
+            {voicesError?.includes('401') || voicesError?.toLowerCase().includes('permission') ? (
+              <>
+                {' '}Your ElevenLabs API key can generate speech but isn't allowed to <em>read your voices</em>.
+                In the ElevenLabs dashboard, edit the key and enable the <strong>Voices</strong> (read) permission.
+              </>
+            ) : null}
           </p>
+          {voicesError && (
+            <p className="text-amber-500/60 text-[10px] font-mono mt-1.5 break-all">{voicesError}</p>
+          )}
         </div>
       )}
 
