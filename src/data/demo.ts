@@ -223,14 +223,28 @@ export const demoClientAssets: ClientAsset[] = [
   { id: 'demo-u5', agency_id: 'demo-agency-1', client_id: 'demo-c3', client_name: 'Local Coffee Co.', kind: 'reference', name: 'store-interior-moodboard.jpg', storage_path: 'demo/ref.jpg', mime_type: 'image/jpeg', file_size: 1_120_000, created_at: daysAgo(5) },
 ]
 
+// Real creatives from the landing showcase double as demo library previews
+// (sorted by filename so the picks are stable across builds).
+const showcaseUrls = Object.entries(
+  import.meta.glob('../assets/showcase/*.{jpg,jpeg,png,webp,JPG,PNG}', {
+    eager: true,
+    query: '?url',
+    import: 'default',
+  }) as Record<string, string>,
+)
+  .sort(([a], [b]) => a.localeCompare(b))
+  .map(([, url]) => url)
+
+const demoImg = (i: number): string => showcaseUrls[i % Math.max(showcaseUrls.length, 1)] ?? '#'
+
 export const demoAssets: MediaAsset[] = [
-  { id: 'demo-a1', project_id: 'demo-p1', project_name: 'Nike — Summer Campaign', type: 'image', status: 'completed', url: '#', metadata: { name: 'Hero Shot — Nike Summer v3', format: 'PNG', size: '4K' }, created_at: hoursAgo(2) },
+  { id: 'demo-a1', project_id: 'demo-p1', project_name: 'Nike — Summer Campaign', type: 'image', status: 'completed', url: demoImg(0), thumbnail_url: demoImg(0), metadata: { name: 'Hero Shot — Nike Summer v3', format: 'PNG', size: '4K' }, created_at: hoursAgo(2) },
   { id: 'demo-a2', project_id: 'demo-p1', project_name: 'Nike — Summer Campaign', type: 'video', status: 'completed', url: '#', metadata: { name: 'A-Roll — Lifestyle Scene 1', format: 'MP4', size: '30s' }, created_at: hoursAgo(3) },
   { id: 'demo-a3', project_id: 'demo-p1', project_name: 'Nike — Summer Campaign', type: 'video', status: 'generating', url: '#', metadata: { name: 'B-Roll — Product Detail Close-up', format: 'MP4', size: '5s' }, created_at: hoursAgo(1) },
-  { id: 'demo-a4', project_id: 'demo-p2', project_name: 'Spotify — Brand Redesign', type: 'image', status: 'completed', url: '#', metadata: { name: 'Brand Logo Treatment — Dark BG', format: 'PNG', size: '4K' }, created_at: daysAgo(1) },
+  { id: 'demo-a4', project_id: 'demo-p2', project_name: 'Spotify — Brand Redesign', type: 'image', status: 'completed', url: demoImg(1), thumbnail_url: demoImg(1), metadata: { name: 'Brand Logo Treatment — Dark BG', format: 'PNG', size: '4K' }, created_at: daysAgo(1) },
   { id: 'demo-a5', project_id: 'demo-p1', project_name: 'Nike — Summer Campaign', type: 'audio', status: 'completed', url: '#', metadata: { name: 'Voiceover — Script 1 (Male, Warm)', format: 'WAV', size: '45s' }, created_at: hoursAgo(4) },
-  { id: 'demo-a6', project_id: 'demo-p4', project_name: 'Adidas — Holiday Ads', type: 'image', status: 'completed', url: '#', metadata: { name: 'Social Creative A — 1:1 Format', format: 'JPG', size: '1080px' }, created_at: hoursAgo(5) },
+  { id: 'demo-a6', project_id: 'demo-p4', project_name: 'Adidas — Holiday Ads', type: 'image', status: 'completed', url: demoImg(2), thumbnail_url: demoImg(2), metadata: { name: 'Social Creative A — 1:1 Format', format: 'JPG', size: '1080px' }, created_at: hoursAgo(5) },
   { id: 'demo-a7', project_id: 'demo-p1', project_name: 'Nike — Summer Campaign', type: 'video', status: 'generating', url: '#', metadata: { name: 'Final Cut — Hero Video 30s', format: 'MP4', size: '30s' }, created_at: hoursAgo(1) },
   { id: 'demo-a8', project_id: 'demo-p1', project_name: 'Nike — Summer Campaign', type: 'audio', status: 'completed', url: '#', metadata: { name: 'Music — Sunrise Drive (Licensed)', format: 'MP3', size: '2:30' }, created_at: hoursAgo(6) },
-  { id: 'demo-a9', project_id: 'demo-p4', project_name: 'Adidas — Holiday Ads', type: 'image', status: 'completed', url: '#', metadata: { name: 'Social Creative B — 9:16 Story', format: 'JPG', size: '1080x1920' }, created_at: hoursAgo(6) },
+  { id: 'demo-a9', project_id: 'demo-p4', project_name: 'Adidas — Holiday Ads', type: 'image', status: 'completed', url: demoImg(3), thumbnail_url: demoImg(3), metadata: { name: 'Social Creative B — 9:16 Story', format: 'JPG', size: '1080x1920' }, created_at: hoursAgo(6) },
 ]

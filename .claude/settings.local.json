@@ -53,7 +53,8 @@
       "Bash(cp logo/companies/*.png src/assets/partners/)",
       "Bash(curl -s -m 10 https://api.brandscape.media/health)",
       "Bash(cat >> *)",
-      "Bash(git commit -m 'Admin AI playground, landing polish: logo marquee, count-up stats, typewriter window *)"
+      "Bash(git commit -m 'Admin AI playground, landing polish: logo marquee, count-up stats, typewriter window *)",
+      "Bash(git commit -m 'Media viewer lightbox in Library, video card previews, demo-mode previews from showcase, new showcase creatives *)"
     ]
   }
 }

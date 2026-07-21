@@ -5,7 +5,7 @@ import { uploadClientAsset, deleteClientAsset } from '../../lib/api'
 import { timeAgo, formatBytes } from '../../lib/format'
 import { plans } from '../../data/plans'
 import { ConfirmDialog } from './ClientsPage'
-import type { ClientAsset, ClientAssetKind } from '../../types'
+import type { ClientAsset, ClientAssetKind, MediaAsset } from '../../types'
 
 type MediaType = 'all' | 'image' | 'video' | 'audio'
 type LibraryTab = 'generated' | 'uploads'
@@ -402,6 +402,7 @@ function UploadModal({ clients, onClose, onUploaded, demoMode, agencyId, remaini
 function GeneratedTab() {
   const [filter, setFilter] = useState<MediaType>('all')
   const [search, setSearch] = useState('')
+  const [viewing, setViewing] = useState<MediaAsset | null>(null)
   const { data: assets, loading, error } = useAssets()
 
   const all = assets ?? []
@@ -485,15 +486,21 @@ function GeneratedTab() {
           {filtered.map((asset) => {
             const config = typeConfig[asset.type]
             const name = asset.metadata?.name ?? `${asset.type} asset`
+            const viewable = asset.status === 'completed' && !!asset.url && asset.url !== '#'
             return (
               <div
                 key={asset.id}
                 className="bg-brand-900/20 border border-white/5 rounded-xl overflow-hidden hover:border-white/10 transition-all duration-300 group"
               >
-                {/* Preview Area */}
-                <div className={`aspect-video ${config.bg} flex items-center justify-center relative`}>
+                {/* Preview Area — click to open the viewer */}
+                <div
+                  className={`aspect-video ${config.bg} flex items-center justify-center relative ${viewable ? 'cursor-pointer' : ''}`}
+                  onClick={() => viewable && setViewing(asset)}
+                >
                   {asset.thumbnail_url ? (
                     <img src={asset.thumbnail_url} alt={name} className="absolute inset-0 w-full h-full object-cover" />
+                  ) : asset.type === 'video' && viewable ? (
+                    <video src={asset.url} preload="metadata" muted playsInline className="absolute inset-0 w-full h-full object-cover" />
                   ) : (
                     <svg className="w-10 h-10 text-white/10 group-hover:text-white/20 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d={config.icon} />
@@ -508,14 +515,24 @@ function GeneratedTab() {
                   )}
 
                   {/* Hover Overlay */}
-                  {asset.status === 'completed' && asset.url && asset.url !== '#' && (
-                    <div className="absolute inset-0 bg-brand-950/0 group-hover:bg-brand-950/30 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                  {viewable && (
+                    <div className="absolute inset-0 bg-brand-950/0 group-hover:bg-brand-950/30 transition-all duration-300 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setViewing(asset)
+                        }}
+                        className="px-4 py-2.5 bg-white text-black font-heading font-bold text-xs tracking-wide rounded-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300"
+                      >
+                        VIEW
+                      </button>
                       <a
                         href={asset.url}
                         target="_blank"
                         rel="noreferrer"
                         download
-                        className="px-5 py-2.5 bg-white text-black font-heading font-bold text-xs tracking-wide rounded-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300"
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-4 py-2.5 border border-white/25 bg-brand-950/40 text-white font-heading font-bold text-xs tracking-wide rounded-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:border-white/50"
                       >
                         DOWNLOAD
                       </a>
@@ -572,6 +589,53 @@ function GeneratedTab() {
               ? 'Generated images, videos, and audio will land here once the Shooting stage runs.'
               : 'Try adjusting your filters or search query'}
           </p>
+        </div>
+      )}
+
+      {/* Media viewer */}
+      {viewing && (
+        <div
+          className="fixed inset-0 z-50 bg-brand-950/90 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8"
+          onClick={() => setViewing(null)}
+        >
+          <div className="w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between gap-4 mb-3">
+              <div className="min-w-0">
+                <p className="font-heading font-semibold text-sm text-white truncate">
+                  {viewing.metadata?.name ?? `${viewing.type} asset`}
+                </p>
+                <p className="text-brand-600 text-xs font-body mt-0.5 truncate">{viewing.project_name ?? '—'}</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={viewing.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  download
+                  className="px-4 py-2 bg-white text-black font-heading font-bold text-[11px] tracking-wide rounded-lg hover:bg-brand-200 transition-colors"
+                >
+                  DOWNLOAD
+                </a>
+                <button
+                  onClick={() => setViewing(null)}
+                  className="px-3.5 py-2 border border-white/15 text-white font-heading font-bold text-[11px] tracking-wide rounded-lg hover:border-white/30 transition-colors"
+                >
+                  CLOSE
+                </button>
+              </div>
+            </div>
+            <div className="bg-brand-900/40 border border-white/10 rounded-2xl overflow-hidden flex items-center justify-center">
+              {viewing.type === 'image' ? (
+                <img src={viewing.url} alt="" className="max-h-[78vh] w-auto max-w-full object-contain" />
+              ) : viewing.type === 'video' ? (
+                <video src={viewing.url} controls autoPlay playsInline className="max-h-[78vh] w-auto max-w-full" />
+              ) : (
+                <div className="w-full p-10">
+                  <audio src={viewing.url} controls className="w-full" />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
