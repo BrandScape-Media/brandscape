@@ -6,10 +6,12 @@ import {
   adminOverrideStage,
   adminUploadMedia,
   adminDeleteMedia,
+  adminDeleteProject,
   type AdminProjectSummary,
   type AdminProjectDetail,
 } from '../../lib/orchestrator'
 import { timeAgo, formatBytes } from '../../lib/format'
+import DiscoveryEditor from '../../components/dashboard/DiscoveryEditor'
 import AdminPlayground from './AdminPlayground'
 import AdminInfluencers from './AdminInfluencers'
 import AdminMediaLab from './AdminMediaLab'
@@ -40,6 +42,7 @@ export default function AdminPage() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   useEffect(() => {
     if (!user?.platform_admin) return
@@ -51,6 +54,7 @@ export default function AdminPage() {
   const loadDetail = async (id: string) => {
     setSelectedId(id)
     setDetailLoading(true)
+    setConfirmDelete(false)
     setNotice(null)
     try {
       setDetail(await adminGetProject(id))
@@ -185,11 +189,43 @@ export default function AdminPage() {
             <div className="bg-brand-900/20 border border-white/5 rounded-xl h-64 animate-pulse" />
           ) : (
             <>
-              <div className="bg-brand-900/20 border border-white/5 rounded-xl p-5">
-                <p className="font-heading font-bold text-base text-white">{detail.name}</p>
-                <p className="text-brand-600 text-xs font-body mt-1">
-                  {detail.agency_name} · {detail.client_name} · current stage: {detail.current_stage}
-                </p>
+              <div className="bg-brand-900/20 border border-white/5 rounded-xl p-5 flex items-start justify-between gap-4">
+                <div>
+                  <p className="font-heading font-bold text-base text-white">{detail.name}</p>
+                  <p className="text-brand-600 text-xs font-body mt-1">
+                    {detail.agency_name} · {detail.client_name} · current stage: {detail.current_stage}
+                  </p>
+                </div>
+                {confirmDelete ? (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-red-400 text-[11px] font-body">Delete this project?</span>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await adminDeleteProject(detail.id)
+                          setConfirmDelete(false)
+                          setSelectedId(null)
+                          setDetail(null)
+                          setNotice('Project deleted.')
+                          adminListProjects().then(setProjects).catch(() => undefined)
+                        } catch (err) {
+                          setError(err instanceof Error ? err.message : 'Delete failed')
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-[10px] font-heading font-bold tracking-wide"
+                    >
+                      YES, DELETE
+                    </button>
+                    <button onClick={() => setConfirmDelete(false)} className="px-3 py-1.5 rounded-lg border border-white/15 text-brand-300 text-[10px] font-heading">CANCEL</button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDelete(true)}
+                    className="shrink-0 px-3 py-1.5 rounded-lg border border-red-500/30 text-red-400 hover:border-red-500/60 text-[10px] font-heading font-bold tracking-wide transition-colors"
+                  >
+                    DELETE PROJECT
+                  </button>
+                )}
               </div>
 
               <StagesPanel detail={detail} onChanged={() => loadDetail(detail.id)} onNotice={setNotice} onError={setError} />
@@ -211,6 +247,7 @@ function StagesPanel({ detail, onChanged, onNotice, onError }: {
 }) {
   const [editingStage, setEditingStage] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
+  const [discoveryOpen, setDiscoveryOpen] = useState(false)
   const [busy, setBusy] = useState(false)
 
   const setStatus = async (stage: string, status: string) => {
@@ -263,15 +300,26 @@ function StagesPanel({ detail, onChanged, onNotice, onError }: {
                   <option key={st} value={st}>{st.replace('_', ' ')}</option>
                 ))}
               </select>
-              <button
-                onClick={() => {
-                  setEditingStage(editingStage === s.stage ? null : s.stage)
-                  setEditText(s.content?.text ?? '')
-                }}
-                className="px-3 py-1.5 border border-white/10 text-brand-300 hover:text-white hover:border-white/25 font-heading text-[11px] rounded-lg transition-all"
-              >
-                {editingStage === s.stage ? 'Close' : 'Edit Output'}
-              </button>
+              {s.stage === 'discovery' ? (
+                <button
+                  onClick={() => setDiscoveryOpen(true)}
+                  className="px-3 py-1.5 border border-white/10 text-brand-300 hover:text-white hover:border-white/25 font-heading text-[11px] rounded-lg transition-all"
+                >
+                  Edit Brief
+                </button>
+              ) : s.stage === 'shooting' ? (
+                <span className="text-brand-700 text-[10px] font-body">media pipeline</span>
+              ) : (
+                <button
+                  onClick={() => {
+                    setEditingStage(editingStage === s.stage ? null : s.stage)
+                    setEditText(s.content?.text ?? '')
+                  }}
+                  className="px-3 py-1.5 border border-white/10 text-brand-300 hover:text-white hover:border-white/25 font-heading text-[11px] rounded-lg transition-all"
+                >
+                  {editingStage === s.stage ? 'Close' : 'Edit Output'}
+                </button>
+              )}
             </div>
             {editingStage === s.stage && (
               <div className="mt-3">
@@ -296,6 +344,19 @@ function StagesPanel({ detail, onChanged, onNotice, onError }: {
           </div>
         ))}
       </div>
+
+      {discoveryOpen && (
+        <DiscoveryEditor
+          projectId={detail.id}
+          discovery={detail.discovery_data as never}
+          mode="admin"
+          onClose={() => setDiscoveryOpen(false)}
+          onSaved={() => {
+            onNotice('Discovery brief updated.')
+            onChanged()
+          }}
+        />
+      )}
     </div>
   )
 }

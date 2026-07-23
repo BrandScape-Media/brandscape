@@ -175,6 +175,7 @@ export interface AdminProjectDetail {
   client_name: string
   archived: boolean
   current_stage: string
+  discovery_data: Record<string, unknown>
   stages: AdminStage[]
   media: AdminMedia[]
 }
@@ -195,6 +196,16 @@ export async function adminOverrideStage(
   patch: { status?: string; text?: string },
 ): Promise<void> {
   await orThrow(await post(`/v1/admin/projects/${projectId}/stages/${stage}/override`, patch))
+}
+
+/** Edit a project's Discovery brief cross-agency (service role). */
+export async function adminUpdateDiscovery(projectId: string, discovery: Record<string, unknown>): Promise<void> {
+  await orThrow(await post(`/v1/admin/projects/${projectId}/discovery`, { discovery_data: discovery }))
+}
+
+/** Delete a project outright (mistaken creation). */
+export async function adminDeleteProject(projectId: string): Promise<void> {
+  await orThrow(await post(`/v1/admin/projects/${projectId}/delete`))
 }
 
 /** Upload a file so it appears in the project's library as AI-generated media. */

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { updateProject } from '../../lib/api'
+import { adminUpdateDiscovery } from '../../lib/orchestrator'
 import type { DiscoveryData } from '../../types'
 
 /**
@@ -13,11 +14,14 @@ export default function DiscoveryEditor({
   discovery,
   onClose,
   onSaved,
+  mode = 'agency',
 }: {
   projectId: string
   discovery: DiscoveryData | null | undefined
   onClose: () => void
   onSaved: () => void
+  /** 'admin' saves cross-agency via the orchestrator (bypasses RLS). */
+  mode?: 'agency' | 'admin'
 }) {
   const d = discovery ?? {}
   const [form, setForm] = useState({
@@ -41,21 +45,24 @@ export default function DiscoveryEditor({
     setSaving(true)
     setError(null)
     try {
-      await updateProject(projectId, {
-        discovery_data: {
-          ...d, // keep platforms, social_links, budget, deadline, avatar_prefs…
-          product: form.product,
-          objective: form.objective,
-          target_audience: form.target_audience,
-          competition: form.competition,
-          pain_points: form.pain_points,
-          usps: form.usps.split('\n').map((s) => s.trim()).filter(Boolean),
-          motto: form.motto,
-          messaging: form.messaging,
-          brand_guidelines: form.brand_guidelines,
-          notes: form.notes,
-        },
-      })
+      const discovery_data: DiscoveryData = {
+        ...d, // keep platforms, social_links, budget, deadline, avatar_prefs…
+        product: form.product,
+        objective: form.objective,
+        target_audience: form.target_audience,
+        competition: form.competition,
+        pain_points: form.pain_points,
+        usps: form.usps.split('\n').map((s) => s.trim()).filter(Boolean),
+        motto: form.motto,
+        messaging: form.messaging,
+        brand_guidelines: form.brand_guidelines,
+        notes: form.notes,
+      }
+      if (mode === 'admin') {
+        await adminUpdateDiscovery(projectId, discovery_data as Record<string, unknown>)
+      } else {
+        await updateProject(projectId, { discovery_data })
+      }
       onSaved()
       onClose()
     } catch (err) {
