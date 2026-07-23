@@ -41,7 +41,7 @@ export default function ClientsPage() {
   }
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl">
+    <div className="p-6 lg:p-8 max-w-[1600px]">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="font-heading font-bold text-2xl">Clients</h1>

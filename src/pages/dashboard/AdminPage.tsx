@@ -70,14 +70,14 @@ export default function AdminPage() {
 
   if (!user?.platform_admin) {
     return (
-      <div className="p-6 lg:p-8 max-w-7xl text-center py-24">
+      <div className="p-6 lg:p-8 max-w-[1600px] text-center py-24">
         <p className="text-brand-400 font-heading text-sm">This area is for Brandscape staff.</p>
       </div>
     )
   }
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl">
+    <div className="p-6 lg:p-8 max-w-[1600px]">
       <div className="flex items-center gap-3 mb-1">
         <h1 className="font-heading font-bold text-2xl">Mission Control</h1>
         <span className="px-2 py-1 rounded-md bg-purple-500/15 text-purple-300 text-[9px] font-heading font-bold tracking-wider">

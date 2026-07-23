@@ -14,6 +14,7 @@ import { projectProgress, stageLabel as stageLabelFor } from './ProjectsPage'
 import ShareManager from './ShareManager'
 import CastCard from '../../components/dashboard/CastCard'
 import ShootControl from '../../components/dashboard/ShootControl'
+import DiscoveryEditor from '../../components/dashboard/DiscoveryEditor'
 import { ConfirmDialog } from './ClientsPage'
 import type { DiscoveryData, Job, ProjectStage, StageStatus, WorkflowStage } from '../../types'
 
@@ -31,6 +32,7 @@ export default function ProjectDetailPage() {
   const [chatInput, setChatInput] = useState('')
   const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'ai'; text: string }>>([])
   const [editingText, setEditingText] = useState<string | null>(null)
+  const [editingDiscovery, setEditingDiscovery] = useState(false)
   const [saving, setSaving] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [shareOpen, setShareOpen] = useState(false)
@@ -126,7 +128,7 @@ export default function ProjectDetailPage() {
 
   if (loading || (project && activeStage === null)) {
     return (
-      <div className="p-6 lg:p-8 max-w-7xl">
+      <div className="p-6 lg:p-8 max-w-[1600px]">
         <div className="h-6 w-64 bg-white/5 rounded animate-pulse mb-6" />
         <div className="h-40 bg-brand-900/30 border border-white/5 rounded-xl animate-pulse" />
       </div>
@@ -135,7 +137,7 @@ export default function ProjectDetailPage() {
 
   if (error || !project) {
     return (
-      <div className="p-6 lg:p-8 max-w-7xl text-center py-24">
+      <div className="p-6 lg:p-8 max-w-[1600px] text-center py-24">
         <p className="text-brand-400 font-heading text-sm mb-2">Project not found</p>
         <p className="text-brand-700 font-body text-xs mb-6">{error ?? 'It may have been deleted, or the link is wrong.'}</p>
         <Link to="/dashboard/projects" className="text-brand-400 hover:text-white text-sm font-heading underline transition-colors">
@@ -279,7 +281,7 @@ export default function ProjectDetailPage() {
   }
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl">
+    <div className="p-6 lg:p-8 max-w-[1600px]">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-xs text-brand-600 font-body mb-4">
         <button onClick={() => navigate('/dashboard/projects')} className="hover:text-brand-300 transition-colors">Projects</button>
@@ -317,25 +319,27 @@ export default function ProjectDetailPage() {
             </svg>
             Share
           </button>
-          <button
-            onClick={() => handleRunAI(currentWorkflow.stage)}
-            disabled={isRunning}
-            className="ai-glow px-5 py-2.5 bg-white text-black font-heading font-bold text-sm rounded-lg hover:bg-brand-200 transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {isRunning ? (
-              <>
-                <span className="w-4 h-4 rounded-full border-2 border-black/20 border-t-black animate-spin" />
-                AI Working…
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Run AI
-              </>
-            )}
-          </button>
+          {AI_RUNNABLE.includes(currentWorkflow.stage) && (
+            <button
+              onClick={() => handleRunAI(currentWorkflow.stage)}
+              disabled={isRunning}
+              className="ai-glow px-5 py-2.5 bg-white text-black font-heading font-bold text-sm rounded-lg hover:bg-brand-200 transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isRunning ? (
+                <>
+                  <span className="w-4 h-4 rounded-full border-2 border-black/20 border-t-black animate-spin" />
+                  AI Working…
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Run AI
+                </>
+              )}
+            </button>
+          )}
 
           {/* Overflow menu: archive / delete */}
           <div className="relative">
@@ -400,6 +404,14 @@ export default function ProjectDetailPage() {
       )}
 
       {shareOpen && <ShareManager projectId={project.id} onClose={() => setShareOpen(false)} />}
+      {editingDiscovery && (
+        <DiscoveryEditor
+          projectId={project.id}
+          discovery={project.discovery_data}
+          onClose={() => setEditingDiscovery(false)}
+          onSaved={reload}
+        />
+      )}
 
       {notice && (
         <div className="mb-6 px-4 py-3 bg-blue-500/5 border border-blue-500/15 rounded-lg flex items-center justify-between gap-4">
@@ -535,26 +547,40 @@ export default function ProjectDetailPage() {
                   </>
                 ) : currentStatus === 'completed' ? (
                   <>
-                    {currentWorkflow.stage !== 'discovery' && (
+                    {currentWorkflow.stage === 'discovery' ? (
                       <button
-                        onClick={() => setEditingText(currentStageRow?.content?.text ?? '')}
+                        onClick={() => setEditingDiscovery(true)}
                         className="px-4 py-2.5 border border-white/15 text-white font-heading text-sm rounded-lg hover:border-white/30 hover:bg-white/[0.03] transition-all flex items-center gap-2"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
-                        Edit Manually
+                        Edit Brief
                       </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => setEditingText(currentStageRow?.content?.text ?? '')}
+                          className="px-4 py-2.5 border border-white/15 text-white font-heading text-sm rounded-lg hover:border-white/30 hover:bg-white/[0.03] transition-all flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Edit Manually
+                        </button>
+                        {AI_RUNNABLE.includes(currentWorkflow.stage) && (
+                          <button
+                            onClick={() => handleRunAI(currentWorkflow.stage)}
+                            className="ai-glow ai-glow-soft px-4 py-2.5 bg-brand-950 border border-white/15 text-white font-heading text-sm rounded-lg hover:border-white/30 transition-all flex items-center gap-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Re-run AI
+                          </button>
+                        )}
+                      </>
                     )}
-                    <button
-                      onClick={() => handleRunAI(currentWorkflow.stage)}
-                      className="ai-glow ai-glow-soft px-4 py-2.5 bg-brand-950 border border-white/15 text-white font-heading text-sm rounded-lg hover:border-white/30 transition-all flex items-center gap-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      Request AI Revision
-                    </button>
                     <div className="flex-1" />
                     {STAGE_ORDER.indexOf(project.current_stage) === STAGE_ORDER.indexOf(currentWorkflow.stage) &&
                       STAGE_ORDER.indexOf(currentWorkflow.stage) < STAGE_ORDER.length - 1 && (

@@ -33,10 +33,17 @@ function AmbientGlow() {
 }
 
 export default function DashboardLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  // Mobile only: the sidebar is an off-canvas drawer (on desktop it's always
+  // visible in flow). Default closed so it never covers content on load.
+  const [mobileOpen, setMobileOpen] = useState(false)
   const { user, signOut, demoMode } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+
+  // close the mobile drawer whenever the route changes
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [location.pathname])
 
   // Real accounts must belong to an agency before using the dashboard
   if (!demoMode && user && !user.agency_id) {
@@ -60,10 +67,19 @@ export default function DashboardLayout() {
 
   return (
     <div className="relative min-h-screen bg-brand-black flex">
-      {/* Sidebar */}
+      {/* Mobile drawer backdrop */}
+      {mobileOpen && (
+        <div
+          onClick={() => setMobileOpen(false)}
+          className="fixed inset-0 z-30 bg-black/60 lg:hidden"
+          aria-hidden
+        />
+      )}
+
+      {/* Sidebar — off-canvas drawer on mobile, in-flow on desktop */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-40 bg-brand-950 border-r border-white/5 transition-all duration-300 ${
-          sidebarOpen ? 'w-64' : 'w-20'
+        className={`fixed lg:static inset-y-0 left-0 z-40 w-64 shrink-0 bg-brand-950 border-r border-white/5 transform transition-transform duration-300 lg:translate-x-0 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex flex-col h-full">
@@ -88,7 +104,7 @@ export default function DashboardLayout() {
                   }`}
                 >
                   <SidebarIcon name={item.icon} />
-                  {sidebarOpen && <span className="tracking-wide">{item.label}</span>}
+                  <span className="tracking-wide">{item.label}</span>
                 </Link>
               )
             })}
@@ -96,21 +112,19 @@ export default function DashboardLayout() {
 
           {/* User */}
           <div className="border-t border-white/5 p-4">
-            <div className={`flex items-center gap-3 ${sidebarOpen ? '' : 'justify-center'}`}>
+            <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-heading font-bold flex-shrink-0">
                 {user?.name?.charAt(0)?.toUpperCase() ?? 'U'}
               </div>
-              {sidebarOpen && (
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-heading text-white truncate">{user?.name ?? 'User'}</p>
-                  <button
-                    onClick={handleSignOut}
-                    className="text-xs text-brand-600 hover:text-brand-400 font-body transition-colors"
-                  >
-                    Sign out
-                  </button>
-                </div>
-              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-heading text-white truncate">{user?.name ?? 'User'}</p>
+                <button
+                  onClick={handleSignOut}
+                  className="text-xs text-brand-600 hover:text-brand-400 font-body transition-colors"
+                >
+                  Sign out
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -122,8 +136,9 @@ export default function DashboardLayout() {
         {/* Top Bar */}
         <header className="h-16 bg-brand-950/80 backdrop-blur-xl border-b border-white/5 sticky top-0 z-30 flex items-center px-6 gap-4">
           <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-brand-400 hover:text-white transition-colors"
+            onClick={() => setMobileOpen((o) => !o)}
+            className="lg:hidden text-brand-400 hover:text-white transition-colors"
+            aria-label="Toggle menu"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
