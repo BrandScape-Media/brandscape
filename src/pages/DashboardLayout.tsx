@@ -76,10 +76,11 @@ export default function DashboardLayout() {
         />
       )}
 
-      {/* Sidebar — off-canvas drawer on mobile, in-flow on desktop */}
+      {/* Sidebar — off-canvas drawer on mobile (hidden until opened), in-flow
+          on desktop. Uses display toggling for reliability. */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-40 w-64 shrink-0 bg-brand-950 border-r border-white/5 transform transition-transform duration-300 lg:translate-x-0 ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed lg:static inset-y-0 left-0 z-40 w-64 shrink-0 bg-brand-950 border-r border-white/5 ${
+          mobileOpen ? 'block' : 'hidden lg:block'
         }`}
       >
         <div className="flex flex-col h-full">
