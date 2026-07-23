@@ -13,6 +13,7 @@ import { timeAgo } from '../../lib/format'
 import { projectProgress, stageLabel as stageLabelFor } from './ProjectsPage'
 import ShareManager from './ShareManager'
 import CastCard from '../../components/dashboard/CastCard'
+import ShootControl from '../../components/dashboard/ShootControl'
 import { ConfirmDialog } from './ClientsPage'
 import type { DiscoveryData, Job, ProjectStage, StageStatus, WorkflowStage } from '../../types'
 
@@ -510,6 +511,11 @@ export default function ProjectDetailPage() {
                     <span className="w-3.5 h-3.5 rounded-full border-2 border-blue-400/25 border-t-blue-400 animate-spin flex-shrink-0" />
                     The AI is {runKind === 'llm_revise' ? 'revising' : 'generating'} this stage — actions unlock when it lands.
                   </div>
+                ) : currentWorkflow.stage === 'shooting' ? (
+                  <ShootControl
+                    projectId={project.id}
+                    shootplanDone={stagesByKey.get('shootplan')?.status === 'completed'}
+                  />
                 ) : editingText !== null ? (
                   <>
                     <button

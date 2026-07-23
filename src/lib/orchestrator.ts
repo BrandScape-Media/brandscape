@@ -66,6 +66,13 @@ export async function reviseStage(projectId: string, stage: WorkflowStage, messa
   return res.json()
 }
 
+/** Run the shoot: render the approved shoot-plan into media. Returns once
+ *  queued; clips land in the Library as they finish. Throws the preflight
+ *  message (no cast / no shoot plan / GPU offline) on 400. */
+export async function runShoot(projectId: string): Promise<void> {
+  await orThrow(await post(`/v1/projects/${projectId}/shoot`))
+}
+
 // ===== Casting (agency-facing) =====
 
 /** Active influencer roster for the cast pickers (Discovery + project page). */
