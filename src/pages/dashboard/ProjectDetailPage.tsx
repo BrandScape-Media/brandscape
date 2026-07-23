@@ -12,6 +12,7 @@ import { getSupabase, isSupabaseConfigured } from '../../lib/supabase/client'
 import { timeAgo } from '../../lib/format'
 import { projectProgress, stageLabel as stageLabelFor } from './ProjectsPage'
 import ShareManager from './ShareManager'
+import CastCard from '../../components/dashboard/CastCard'
 import { ConfirmDialog } from './ClientsPage'
 import type { DiscoveryData, Job, ProjectStage, StageStatus, WorkflowStage } from '../../types'
 
@@ -640,6 +641,9 @@ export default function ProjectDetailPage() {
 
         {/* Sidebar */}
         <div className="space-y-4">
+          {/* Cast */}
+          <CastCard projectId={project.id} influencerId={project.influencer_id} onChanged={reload} />
+
           {/* Stage Overview */}
           <div className="bg-brand-900/30 border border-white/5 rounded-xl p-5">
             <h3 className="font-heading font-semibold text-xs text-brand-300 mb-4 tracking-wider">STAGES</h3>

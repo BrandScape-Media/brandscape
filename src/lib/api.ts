@@ -132,7 +132,7 @@ export async function getProject(projectId: string): Promise<Project | null> {
 
 export async function createProject(
   agencyId: string,
-  input: { name: string; client_id: string; discovery_data: DiscoveryData },
+  input: { name: string; client_id: string; discovery_data: DiscoveryData; influencer_id?: string | null },
 ): Promise<Project> {
   // the on_project_created trigger auto-creates the 8 stage rows
   const { data, error } = await getSupabase()

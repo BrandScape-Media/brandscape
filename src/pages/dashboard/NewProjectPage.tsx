@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useAgency, useClients, useProjects } from '../../hooks/useData'
 import { createProject } from '../../lib/api'
+import { listInfluencersForAgency, type AgencyInfluencer } from '../../lib/orchestrator'
 import { plans } from '../../data/plans'
+import type { AvatarPrefs } from '../../types'
 
 const OBJECTIVES = [
   'Brand awareness',
@@ -49,7 +51,17 @@ export default function NewProjectPage() {
     messaging: '',
     brandGuidelines: '',
     notes: '',
+    avatarGender: 'any',
+    avatarAge: 'any',
+    avatarTags: '',
+    pinnedInfluencerId: '',
   })
+  // Cast picker roster — empty in demo mode or while the API is unreachable
+  const [influencers, setInfluencers] = useState<AgencyInfluencer[]>([])
+  useEffect(() => {
+    if (demoMode) return
+    listInfluencersForAgency().then(setInfluencers).catch(() => undefined)
+  }, [demoMode])
 
   const updateField = (field: string, value: string | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -103,7 +115,13 @@ export default function NewProjectPage() {
           messaging: formData.messaging,
           brand_guidelines: formData.brandGuidelines,
           notes: formData.notes,
+          avatar_prefs: {
+            gender: formData.avatarGender as AvatarPrefs['gender'],
+            age_bracket: formData.avatarAge as AvatarPrefs['age_bracket'],
+            tags: formData.avatarTags.trim() || undefined,
+          },
         },
+        influencer_id: formData.pinnedInfluencerId || null,
       })
       navigate(`/dashboard/projects/${project.id}`)
     } catch (err) {
@@ -326,6 +344,80 @@ export default function NewProjectPage() {
               className={`${inputCls} resize-none`}
               placeholder="What frustrations does the audience have that this product fixes? These become hook angles."
             />
+          </div>
+
+          {/* Cast / Avatar — soft preferences + optional hard pin */}
+          <div className="border border-white/[0.07] rounded-xl p-4 space-y-4 bg-brand-900/20">
+            <div>
+              <h3 className="font-heading font-semibold text-sm text-white">Presenter (AI Avatar)</h3>
+              <p className="text-brand-600 text-xs font-body mt-0.5">
+                Who should front the videos? Leave preferences on &quot;Any&quot; and the AI casts the best fit — or pin a specific persona below.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-heading text-brand-500 mb-1.5">Gender preference</label>
+                <select value={formData.avatarGender} onChange={(e) => updateField('avatarGender', e.target.value)} className={inputCls}>
+                  <option value="any">Any</option>
+                  <option value="female">Female</option>
+                  <option value="male">Male</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-heading text-brand-500 mb-1.5">Age preference</label>
+                <select value={formData.avatarAge} onChange={(e) => updateField('avatarAge', e.target.value)} className={inputCls}>
+                  <option value="any">Any</option>
+                  <option value="18-25">18–25</option>
+                  <option value="26-35">26–35</option>
+                  <option value="36-50">36–50</option>
+                  <option value="50+">50+</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-heading text-brand-500 mb-1.5">Preferred traits (optional)</label>
+              <input
+                value={formData.avatarTags}
+                onChange={(e) => updateField('avatarTags', e.target.value)}
+                className={inputCls}
+                placeholder="e.g. energetic, warm, professional, sporty…"
+              />
+            </div>
+            {influencers.length > 0 && (
+              <div>
+                <label className="block text-xs font-heading text-brand-500 mb-1.5">Pin a specific presenter (optional)</label>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  <button
+                    type="button"
+                    onClick={() => updateField('pinnedInfluencerId', '')}
+                    className={`shrink-0 w-20 rounded-lg border-2 p-1.5 text-center transition-all ${
+                      !formData.pinnedInfluencerId ? 'border-violet-400 bg-violet-500/10' : 'border-white/10 hover:border-white/25'
+                    }`}
+                  >
+                    <div className="w-full aspect-[3/4] rounded bg-brand-900 flex items-center justify-center text-lg">✨</div>
+                    <span className="block text-[10px] font-heading text-brand-300 mt-1 truncate">AI decides</span>
+                  </button>
+                  {influencers.map((inf) => (
+                    <button
+                      key={inf.id}
+                      type="button"
+                      onClick={() => updateField('pinnedInfluencerId', inf.id)}
+                      className={`shrink-0 w-20 rounded-lg border-2 p-1.5 text-center transition-all ${
+                        formData.pinnedInfluencerId === inf.id ? 'border-violet-400 bg-violet-500/10' : 'border-white/10 hover:border-white/25'
+                      }`}
+                      title={`${inf.gender} · ${inf.age_bracket}${inf.voice_name ? ` · 🎙 ${inf.voice_name}` : ''}`}
+                    >
+                      {inf.primary_url ? (
+                        <img src={inf.primary_url} alt={inf.name} className="w-full aspect-[3/4] rounded object-cover" />
+                      ) : (
+                        <div className="w-full aspect-[3/4] rounded bg-brand-900" />
+                      )}
+                      <span className="block text-[10px] font-heading text-brand-300 mt-1 truncate">{inf.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-between pt-4">

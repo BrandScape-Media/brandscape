@@ -66,6 +66,29 @@ export async function reviseStage(projectId: string, stage: WorkflowStage, messa
   return res.json()
 }
 
+// ===== Casting (agency-facing) =====
+
+/** Active influencer roster for the cast pickers (Discovery + project page). */
+export interface AgencyInfluencer {
+  id: string
+  name: string
+  gender: 'female' | 'male'
+  age_bracket: string
+  tags: string[]
+  voice_name: string | null
+  primary_url: string | null
+}
+
+export async function listInfluencersForAgency(): Promise<AgencyInfluencer[]> {
+  const res = await orThrow(await get('/v1/influencers'))
+  return (await res.json()).influencers ?? []
+}
+
+/** Pin/override the campaign's cast; null = let the AI decide at the shoot plan. */
+export async function setProjectCast(projectId: string, influencerId: string | null): Promise<void> {
+  await orThrow(await post(`/v1/projects/${projectId}/cast`, { influencer_id: influencerId }))
+}
+
 // ===== Uploaded assets on Cloudflare R2 (via orchestrator presigned URLs) =====
 
 export interface PresignedUpload {

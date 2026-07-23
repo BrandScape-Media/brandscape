@@ -83,6 +83,8 @@ export interface Project {
   name: string
   current_stage: WorkflowStage
   discovery_data?: DiscoveryData | null
+  /** the cast: bound influencer performing this campaign (null = AI decides at the shoot plan) */
+  influencer_id?: string | null
   archived?: boolean
   created_at: string
   updated_at: string
@@ -114,6 +116,14 @@ export interface StageContentData {
   [key: string]: unknown
 }
 
+/** Soft casting guidance the agency sets at Discovery — guides the AI's
+ *  influencer pick without forcing it ('any' / empty = no preference). */
+export interface AvatarPrefs {
+  gender?: 'any' | 'female' | 'male'
+  age_bracket?: 'any' | '18-25' | '26-35' | '36-50' | '50+'
+  tags?: string
+}
+
 export interface DiscoveryData {
   /** what we're promoting for the client */
   product?: string
@@ -137,6 +147,8 @@ export interface DiscoveryData {
   messaging?: string
   brand_guidelines?: string
   notes?: string
+  /** soft casting guidance for the AI (see AvatarPrefs) */
+  avatar_prefs?: AvatarPrefs
   /** legacy v1 fields (older projects) */
   goals?: string
   timeline?: string
