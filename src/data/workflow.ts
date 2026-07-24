@@ -1,8 +1,9 @@
 import type { WorkflowStage } from '../types'
 
-// Pipeline v2: Strategy is folded into Ideation; Editing is shelved
-// until the automated-edit milestone. The DB still accepts the old
-// stage names on historical rows — this list is what the product shows.
+// Pipeline v2: Strategy is folded into Ideation. `editing` is un-shelved as
+// the final "Deliverables" stage (client-ready creatives + uploads). The DB
+// still accepts the old stage names on historical rows — this list is what
+// the product shows.
 export const workflowStages: {
   stage: WorkflowStage
   label: string
@@ -44,5 +45,11 @@ export const workflowStages: {
     label: 'Raws',
     icon: 'shooting',
     description: 'AI-generated raw images and video clips, ready to download.',
+  },
+  {
+    stage: 'editing',
+    label: 'Deliverables',
+    icon: 'editing',
+    description: 'Final client-ready ad creatives, banners, and edited videos.',
   },
 ]

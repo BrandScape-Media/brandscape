@@ -431,6 +431,34 @@ export async function addShareComment(input: {
 
 // ===== Media assets =====
 
+/** Generated media for one project (Raws workspace), newest first, with
+ *  short-lived R2 view URLs swapped in. RLS scopes it to the agency. */
+export async function listProjectAssets(projectId: string): Promise<MediaAsset[]> {
+  const { data, error } = await getSupabase()
+    .from('media_assets')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  const assets = (data ?? []) as MediaAsset[]
+  const r2Keys = assets.filter((a) => a.url?.startsWith('generated/')).map((a) => a.url)
+  if (r2Keys.length > 0) {
+    try {
+      const urls = await getAssetViewUrls(r2Keys)
+      assets.forEach((a) => {
+        const signed = urls[a.url]
+        if (signed) {
+          if (a.type === 'image' && !a.thumbnail_url) a.thumbnail_url = signed
+          a.url = signed
+        }
+      })
+    } catch {
+      /* previews unavailable */
+    }
+  }
+  return assets
+}
+
 export async function listAssets(): Promise<MediaAsset[]> {
   const { data, error } = await getSupabase()
     .from('media_assets')

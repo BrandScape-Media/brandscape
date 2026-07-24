@@ -73,11 +73,23 @@ export async function runShoot(projectId: string): Promise<void> {
   await orThrow(await post(`/v1/projects/${projectId}/shoot`))
 }
 
-/** Generate the voiceovers from the approved Scripts stage — each VO block
- *  synthesized separately in the cast voice, landing in the Library. Throws
- *  the preflight message (no cast / no voice / no scripts) on 400. */
-export async function generateVoiceovers(projectId: string): Promise<void> {
-  await orThrow(await post(`/v1/projects/${projectId}/voiceovers`))
+export type RawsPhase = 'images' | 'audio' | 'video' | 'all'
+
+/** Generate a whole Raws phase (a "Generate all" button). Job-tracked. */
+export async function generateRaws(projectId: string, phase: RawsPhase): Promise<void> {
+  await orThrow(await post(`/v1/projects/${projectId}/raws/generate`, { phase }))
+}
+
+/** Regenerate a single image/video shot card. The new asset supersedes it. */
+export async function regenerateShot(projectId: string, shotId: string): Promise<void> {
+  await orThrow(await post(`/v1/projects/${projectId}/raws/shot/${encodeURIComponent(shotId)}/regenerate`))
+}
+
+/** Regenerate a single voiceover line, optionally with edited wording. */
+export async function regenerateVo(projectId: string, voId: string, text?: string): Promise<void> {
+  await orThrow(
+    await post(`/v1/projects/${projectId}/raws/vo/${encodeURIComponent(voId)}/regenerate`, text != null ? { text } : undefined),
+  )
 }
 
 // ===== Casting (agency-facing) =====
@@ -243,11 +255,13 @@ export async function adminDeleteProject(projectId: string): Promise<void> {
   await orThrow(await post(`/v1/admin/projects/${projectId}/delete`))
 }
 
-/** Upload a file so it appears in the project's library as AI-generated media. */
+/** Upload a file so it appears in the project's library as AI-generated media.
+ *  `deliverable` tags it as a final client-ready output (Deliverables stage). */
 export async function adminUploadMedia(
   projectId: string,
   file: File,
   type: 'image' | 'video' | 'audio',
+  deliverable = false,
 ): Promise<void> {
   const contentType = file.type || 'application/octet-stream'
   const presignRes = await orThrow(
@@ -266,6 +280,7 @@ export async function adminUploadMedia(
       type,
       fileName: file.name,
       sizeBytes: file.size,
+      deliverable,
     }),
   )
 }

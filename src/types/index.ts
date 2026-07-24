@@ -183,6 +183,7 @@ export interface Job {
   type: string
   status: 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'
   error?: string | null
+  payload?: { phase?: string; auto?: boolean } | null
   created_at: string
   started_at?: string | null
   finished_at?: string | null

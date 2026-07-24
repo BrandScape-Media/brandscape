@@ -496,6 +496,8 @@ function MediaPanel({ detail, onChanged, onNotice, onError }: {
   onError: (m: string) => void
 }) {
   const [uploading, setUploading] = useState(false)
+  // when on, uploads are tagged as final Deliverables (client-ready), not raws
+  const [asDeliverable, setAsDeliverable] = useState(false)
 
   const handleFiles = async (files: FileList | null) => {
     if (!files?.length) return
@@ -503,9 +505,9 @@ function MediaPanel({ detail, onChanged, onNotice, onError }: {
     try {
       for (const file of [...files]) {
         const type = file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image'
-        await adminUploadMedia(detail.id, file, type)
+        await adminUploadMedia(detail.id, file, type, asDeliverable)
       }
-      onNotice(`${files.length} file${files.length > 1 ? 's' : ''} placed in the library as generated media.`)
+      onNotice(`${files.length} file${files.length > 1 ? 's' : ''} placed as ${asDeliverable ? 'deliverables' : 'generated media'}.`)
       onChanged()
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Upload failed')
@@ -528,10 +530,16 @@ function MediaPanel({ detail, onChanged, onNotice, onError }: {
     <div className="bg-brand-900/20 border border-white/5 rounded-xl p-5">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-heading font-semibold text-xs text-brand-300 tracking-wider">GENERATED MEDIA (ACT AS THE AI)</h3>
-        <label className={`px-4 py-2 bg-white text-black font-heading font-bold text-[11px] tracking-wide rounded-lg transition-colors cursor-pointer ${uploading ? 'opacity-40 pointer-events-none' : 'hover:bg-brand-200'}`}>
-          {uploading ? 'Uploading…' : '+ Upload as AI'}
-          <input type="file" multiple accept="image/*,video/*,audio/*" className="hidden" onChange={(e) => handleFiles(e.target.files)} />
-        </label>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-1.5 text-[10px] font-heading text-brand-400 cursor-pointer select-none">
+            <input type="checkbox" checked={asDeliverable} onChange={(e) => setAsDeliverable(e.target.checked)} className="accent-white" />
+            Deliverable
+          </label>
+          <label className={`px-4 py-2 bg-white text-black font-heading font-bold text-[11px] tracking-wide rounded-lg transition-colors cursor-pointer ${uploading ? 'opacity-40 pointer-events-none' : 'hover:bg-brand-200'}`}>
+            {uploading ? 'Uploading…' : asDeliverable ? '+ Upload Deliverable' : '+ Upload as AI'}
+            <input type="file" multiple accept="image/*,video/*,audio/*" className="hidden" onChange={(e) => handleFiles(e.target.files)} />
+          </label>
+        </div>
       </div>
 
       {detail.media.length === 0 ? (

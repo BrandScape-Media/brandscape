@@ -4,7 +4,7 @@ import { workflowStages } from '../../data/workflow'
 import WorkflowIcon from '../../components/WorkflowIcon'
 import { useAuth } from '../../context/AuthContext'
 import { useProject } from '../../hooks/useData'
-import { updateStage, updateProject, deleteProject, getLatestStageJob, getLatestJobByType, listActiveJobs } from '../../lib/api'
+import { updateStage, updateProject, deleteProject, getLatestStageJob, listActiveJobs } from '../../lib/api'
 import { runStage, reviseStage } from '../../lib/orchestrator'
 import Markdown from '../../components/Markdown'
 import AiWorking from '../../components/AiWorking'
@@ -13,8 +13,8 @@ import { timeAgo } from '../../lib/format'
 import { projectProgress, stageLabel as stageLabelFor } from './ProjectsPage'
 import ShareManager from './ShareManager'
 import CastCard from '../../components/dashboard/CastCard'
-import ShootControl from '../../components/dashboard/ShootControl'
-import VoiceoverControl from '../../components/dashboard/VoiceoverControl'
+import RawsWorkspace from '../../components/dashboard/RawsWorkspace'
+import DeliverablesPanel from '../../components/dashboard/DeliverablesPanel'
 import DiscoveryEditor from '../../components/dashboard/DiscoveryEditor'
 import { ConfirmDialog } from './ClientsPage'
 import type { DiscoveryData, Job, ProjectStage, StageStatus, WorkflowStage } from '../../types'
@@ -42,10 +42,8 @@ export default function ProjectDetailPage() {
   const [failedJob, setFailedJob] = useState<Job | null>(null)
   // stages with an AI job currently queued/running → drives the "thinking" UI
   const [activeRuns, setActiveRuns] = useState<Map<WorkflowStage, 'llm_generate' | 'llm_revise'>>(new Map())
-  // the latest automated-shoot job — ShootControl mirrors its live status
+  // the latest Raws phase job (shoot_run) — RawsWorkspace mirrors its status
   const [shootJob, setShootJob] = useState<Job | null>(null)
-  // the latest voiceover (tts) job — VoiceoverControl mirrors its live status
-  const [voiceoverJob, setVoiceoverJob] = useState<Job | null>(null)
 
   const stagesByKey = useMemo(() => {
     const map = new Map<WorkflowStage, ProjectStage>()
@@ -81,16 +79,10 @@ export default function ProjectDetailPage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'project_stages', filter: `project_id=eq.${id}` }, () => reload())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs', filter: `project_id=eq.${id}` }, (payload) => {
         const row = payload.new as { status?: string; error?: string; stage?: string; type?: string }
-        // the automated shoot has its own control — mirror it there, not in
-        // the LLM "thinking" UI / failure banner
+        // Raws generation (shoot_run, incl. the auto VO pass) has its own
+        // workspace — mirror it there, not in the LLM "thinking" UI / banner
         if (row?.type === 'shoot_run') {
           setShootJob(row as Job)
-          reload()
-          return
-        }
-        // voiceover generation likewise has its own control on the Scripts stage
-        if (row?.type === 'tts') {
-          setVoiceoverJob(row as Job)
           reload()
           return
         }
@@ -122,7 +114,7 @@ export default function ProjectDetailPage() {
         setActiveRuns((prev) => {
           const next = new Map(prev)
           jobs.forEach((j) => {
-            if (j.type === 'shoot_run' || j.type === 'tts') return // own controls
+            if (j.type === 'shoot_run') return // Raws workspace shows this one
             if (j.stage) next.set(j.stage as WorkflowStage, j.type === 'llm_revise' ? 'llm_revise' : 'llm_generate')
           })
           return next
@@ -131,15 +123,11 @@ export default function ProjectDetailPage() {
       .catch(() => undefined)
   }, [demoMode, id])
 
-  // seed the shoot + voiceover status on load (Realtime only covers changes
-  // after mount)
+  // seed the Raws phase-job status on load (Realtime only covers post-mount)
   useEffect(() => {
     if (demoMode || !id || !isSupabaseConfigured()) return
     getLatestStageJob(id, 'shooting')
       .then((j) => { if (j?.type === 'shoot_run') setShootJob(j) })
-      .catch(() => undefined)
-    getLatestJobByType(id, 'tts')
-      .then((j) => { if (j) setVoiceoverJob(j) })
       .catch(() => undefined)
   }, [demoMode, id])
 
@@ -559,11 +547,13 @@ export default function ProjectDetailPage() {
                     The AI is {runKind === 'llm_revise' ? 'revising' : 'generating'} this stage — actions unlock when it lands.
                   </div>
                 ) : currentWorkflow.stage === 'shooting' ? (
-                  <ShootControl
+                  <RawsWorkspace
                     projectId={project.id}
                     shootplanDone={stagesByKey.get('shootplan')?.status === 'completed'}
                     job={shootJob}
                   />
+                ) : currentWorkflow.stage === 'editing' ? (
+                  <DeliverablesPanel projectId={project.id} />
                 ) : editingText !== null ? (
                   <>
                     <button
@@ -704,10 +694,6 @@ export default function ProjectDetailPage() {
                 )}
               </div>
 
-              {/* Voiceover generation — appears on the Scripts stage once approved */}
-              {currentWorkflow.stage === 'scripts' && currentStatus === 'completed' && editingText === null && !isRunning && (
-                <VoiceoverControl projectId={project.id} job={voiceoverJob} />
-              )}
             </div>
           </div>
         </div>
