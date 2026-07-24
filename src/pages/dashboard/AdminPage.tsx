@@ -7,8 +7,10 @@ import {
   adminUploadMedia,
   adminDeleteMedia,
   adminDeleteProject,
+  adminGetShootPlan,
   type AdminProjectSummary,
   type AdminProjectDetail,
+  type AdminShootPlan,
 } from '../../lib/orchestrator'
 import { timeAgo, formatBytes } from '../../lib/format'
 import DiscoveryEditor from '../../components/dashboard/DiscoveryEditor'
@@ -229,6 +231,7 @@ export default function AdminPage() {
               </div>
 
               <StagesPanel detail={detail} onChanged={() => loadDetail(detail.id)} onNotice={setNotice} onError={setError} />
+              <MachinePlanPanel projectId={detail.id} />
               <MediaPanel detail={detail} onChanged={() => loadDetail(detail.id)} onNotice={setNotice} onError={setError} />
             </>
           )}
@@ -356,6 +359,131 @@ function StagesPanel({ detail, onChanged, onNotice, onError }: {
             onChanged()
           }}
         />
+      )}
+    </div>
+  )
+}
+
+/**
+ * The shoot plan's MACHINE layer — the raw shots JSON the pipeline renders
+ * from (cast, per-shot workflows, VO wiring, prompts). Redacted from
+ * agencies by design; this is the staff QC window into it.
+ */
+function MachinePlanPanel({ projectId }: { projectId: string }) {
+  const [open, setOpen] = useState(false)
+  const [data, setData] = useState<AdminShootPlan | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // fresh project selected → collapse and drop the stale plan
+  useEffect(() => {
+    setOpen(false)
+    setData(null)
+    setError(null)
+  }, [projectId])
+
+  const toggle = async () => {
+    const next = !open
+    setOpen(next)
+    if (!next || data || loading) return
+    setLoading(true)
+    setError(null)
+    try {
+      setData(await adminGetShootPlan(projectId))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not load the machine plan.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const shots = data?.plan?.shots ?? []
+  const workflowStyles: Record<string, string> = {
+    product: 'bg-sky-500/15 text-sky-300',
+    composite: 'bg-violet-500/15 text-violet-300',
+    broll: 'bg-amber-500/15 text-amber-300',
+    talkinghead: 'bg-green-500/15 text-green-300',
+    voiceover: 'bg-rose-500/15 text-rose-300',
+  }
+
+  return (
+    <div className="bg-brand-900/20 border border-white/5 rounded-xl p-5">
+      <button onClick={toggle} className="w-full flex items-center justify-between group">
+        <h3 className="font-heading font-semibold text-xs text-brand-300 tracking-wider">
+          MACHINE PLAN <span className="text-brand-600 font-body normal-case tracking-normal">— what the shoot renders (never shown to agencies)</span>
+        </h3>
+        <span className="text-brand-500 group-hover:text-white text-xs transition-colors">{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className="mt-4">
+          {loading && <p className="text-brand-500 text-xs font-body">Loading…</p>}
+          {error && <p className="text-red-400 text-xs font-body">{error}</p>}
+          {!loading && !error && data && !data.plan && (
+            <p className="text-brand-600 text-xs font-body">
+              No machine plan yet — the Shoot Plan stage hasn&apos;t produced one for this project (run it, or re-run if it predates structured output).
+            </p>
+          )}
+          {!loading && data?.plan && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-body">
+                <span className="text-brand-400">
+                  <span className="text-brand-600">Cast:</span>{' '}
+                  {data.influencer
+                    ? `${data.influencer.name} (${data.influencer.gender} · ${data.influencer.age_bracket}${data.influencer.voice_name ? ` · 🎙 ${data.influencer.voice_name}` : ''})`
+                    : (data.plan.influencer_id ?? '—')}
+                </span>
+                {data.plan.cast_why && <span className="text-brand-600 italic">“{data.plan.cast_why}”</span>}
+                <span className="text-brand-600">
+                  VO blocks from Scripts: {data.vo_ids.length ? data.vo_ids.join(', ') : 'none'}
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs font-body">
+                  <thead>
+                    <tr className="text-brand-600 border-b border-white/5">
+                      <th className="py-2 pr-3 font-heading font-semibold">Shot</th>
+                      <th className="py-2 pr-3 font-heading font-semibold">Script</th>
+                      <th className="py-2 pr-3 font-heading font-semibold">Workflow</th>
+                      <th className="py-2 pr-3 font-heading font-semibold">Wiring</th>
+                      <th className="py-2 font-heading font-semibold">Prompt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {shots.map((s) => {
+                      const wiring = [
+                        s.product_ref ? `📷 ${s.product_ref}` : null,
+                        s.start_frame ? `frame: ${s.start_frame}` : null,
+                        s.vo ? `vo: ${s.vo}${data.vo_ids.includes(s.vo) ? '' : ' ⚠ missing'}` : null,
+                        s.duration_s ? `${s.duration_s}s` : null,
+                        s.language ?? null,
+                      ].filter(Boolean).join(' · ')
+                      return (
+                        <tr key={s.id} className="border-b border-white/[0.03] align-top">
+                          <td className="py-2 pr-3 text-white whitespace-nowrap">{s.id}</td>
+                          <td className="py-2 pr-3 text-brand-400 whitespace-nowrap">{s.script ?? '—'}</td>
+                          <td className="py-2 pr-3 whitespace-nowrap">
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-heading font-bold ${workflowStyles[s.workflow] ?? 'bg-white/10 text-brand-300'}`}>
+                              {s.workflow}
+                            </span>
+                          </td>
+                          <td className="py-2 pr-3 text-brand-500 whitespace-nowrap">{wiring || '—'}</td>
+                          <td className="py-2 text-brand-400 max-w-[420px]">
+                            <span className="line-clamp-2" title={s.prompt}>{s.prompt ?? '—'}</span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-brand-700 text-[10px] font-body">
+                {shots.length} shots · {shots.filter((s) => s.workflow === 'talkinghead').length} talking-head · {shots.filter((s) => s.workflow === 'voiceover').length} standalone VO
+                {data.updated_at ? ` · saved ${timeAgo(data.updated_at)}` : ''}
+              </p>
+            </div>
+          )}
+        </div>
       )}
     </div>
   )

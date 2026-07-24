@@ -2,23 +2,27 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { runShoot } from '../../lib/orchestrator'
+import type { Job } from '../../types'
 
 /**
  * The Raws / Shooting stage control: kicks off the automated shoot (image
- * shots → video clips → VO) from the approved shoot plan. The render runs in
- * the background — finished clips appear in the Media Library — so this just
- * starts it and points the user there.
+ * shots → video clips → VO) from the approved shoot plan, and mirrors the
+ * shoot job's live status — running, partial results, or the failure reason
+ * — via the jobs Realtime feed on the project page.
  */
 export default function ShootControl({
   projectId,
   shootplanDone,
+  job,
 }: {
   projectId: string
   shootplanDone: boolean
+  /** Latest shoot_run job for this project (live via Realtime), if any. */
+  job?: Job | null
 }) {
   const { demoMode } = useAuth()
   const [busy, setBusy] = useState(false)
-  const [started, setStarted] = useState(false)
+  const [justStarted, setJustStarted] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const start = async () => {
@@ -30,7 +34,7 @@ export default function ShootControl({
     setError(null)
     try {
       await runShoot(projectId)
-      setStarted(true)
+      setJustStarted(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not start the shoot.')
     } finally {
@@ -46,11 +50,57 @@ export default function ShootControl({
     )
   }
 
-  if (started) {
+  const status = job?.status
+  const running = status === 'queued' || status === 'running' || (justStarted && !status)
+
+  if (running) {
+    return (
+      <div className="w-full px-4 py-3 bg-blue-500/[0.06] border border-blue-500/15 rounded-lg flex flex-wrap items-center justify-between gap-3">
+        <p className="text-blue-300 text-xs font-body flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse shrink-0" />
+          Shoot in progress — clips render one by one and appear in the Media Library as they finish. Long renders are normal.
+        </p>
+        <Link
+          to="/dashboard/library"
+          className="shrink-0 px-4 py-2 bg-white text-black font-heading font-bold text-[11px] tracking-wide rounded-lg hover:bg-brand-200 transition-colors"
+        >
+          OPEN LIBRARY
+        </Link>
+      </div>
+    )
+  }
+
+  if (status === 'failed') {
+    return (
+      <div className="w-full px-4 py-3 bg-red-500/[0.06] border border-red-500/15 rounded-lg space-y-2">
+        <p className="text-red-300 text-xs font-body">
+          The shoot could not finish: {job?.error ?? 'unknown error'}
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={start}
+            disabled={busy}
+            className="px-4 py-2 bg-white text-black font-heading font-bold text-[11px] tracking-wide rounded-lg hover:bg-brand-200 transition-colors disabled:opacity-40"
+          >
+            {busy ? 'STARTING…' : 'TRY AGAIN'}
+          </button>
+          <Link
+            to="/dashboard/library"
+            className="px-3.5 py-2 border border-white/15 text-white font-heading font-bold text-[11px] tracking-wide rounded-lg hover:border-white/30 transition-colors"
+          >
+            OPEN LIBRARY
+          </Link>
+        </div>
+        {error && <p className="text-red-400 text-xs font-body">{error}</p>}
+      </div>
+    )
+  }
+
+  if (status === 'succeeded') {
     return (
       <div className="w-full px-4 py-3 bg-green-500/[0.06] border border-green-500/15 rounded-lg flex flex-wrap items-center justify-between gap-3">
         <p className="text-green-300 text-xs font-body">
-          Shoot started — clips render in the background and appear in the Media Library as they finish. Long renders are normal.
+          Shoot finished{job?.error ? ` — ${job.error}` : ' — every clip is in the Media Library.'}
         </p>
         <div className="flex items-center gap-2 shrink-0">
           <Link
@@ -60,10 +110,11 @@ export default function ShootControl({
             OPEN LIBRARY
           </Link>
           <button
-            onClick={() => setStarted(false)}
-            className="px-3.5 py-2 border border-white/15 text-white font-heading font-bold text-[11px] tracking-wide rounded-lg hover:border-white/30 transition-colors"
+            onClick={start}
+            disabled={busy}
+            className="px-3.5 py-2 border border-white/15 text-white font-heading font-bold text-[11px] tracking-wide rounded-lg hover:border-white/30 transition-colors disabled:opacity-40"
           >
-            RUN AGAIN
+            {busy ? 'STARTING…' : 'RUN AGAIN'}
           </button>
         </div>
       </div>

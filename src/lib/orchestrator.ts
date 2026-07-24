@@ -190,6 +190,34 @@ export async function adminGetProject(projectId: string): Promise<AdminProjectDe
   return res.json()
 }
 
+// ===== Shoot-plan machine layer (staff QC — never shown to agencies) =====
+
+export interface AdminShot {
+  id: string
+  script?: string
+  workflow: 'product' | 'composite' | 'broll' | 'talkinghead' | 'voiceover'
+  inputs?: string[]
+  product_ref?: string
+  start_frame?: string
+  vo?: string
+  language?: string
+  duration_s?: number
+  prompt?: string
+}
+
+export interface AdminShootPlan {
+  plan: { influencer_id?: string; cast_why?: string; shots?: AdminShot[] } | null
+  influencer: { id: string; name: string; gender: string; age_bracket: string; voice_name: string | null } | null
+  vo_ids: string[]
+  updated_at: string | null
+}
+
+/** The raw shots JSON the shoot renders from — the layer agencies never see. */
+export async function adminGetShootPlan(projectId: string): Promise<AdminShootPlan> {
+  const res = await orThrow(await get(`/v1/admin/projects/${projectId}/shootplan`))
+  return res.json()
+}
+
 export async function adminOverrideStage(
   projectId: string,
   stage: string,

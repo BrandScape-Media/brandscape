@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useAgency, useClients, useProjects } from '../../hooks/useData'
-import { createProject } from '../../lib/api'
+import { createProject, uploadClientAsset } from '../../lib/api'
 import { listInfluencersForAgency, type AgencyInfluencer } from '../../lib/orchestrator'
 import { plans } from '../../data/plans'
 import type { AvatarPrefs } from '../../types'
@@ -62,6 +62,37 @@ export default function NewProjectPage() {
     if (demoMode) return
     listInfluencersForAgency().then(setInfluencers).catch(() => undefined)
   }, [demoMode])
+
+  // Product photos upload straight to the selected client's library — the
+  // generation pipeline shoots from them. A client can have several (e.g. a
+  // jewelry brand's earrings, rings and necklaces).
+  const [productUploads, setProductUploads] = useState<
+    { name: string; status: 'uploading' | 'done' | 'error'; message?: string }[]
+  >([])
+  useEffect(() => setProductUploads([]), [formData.clientId])
+
+  const handleProductPhotos = async (files: FileList | null) => {
+    if (!files?.length || !formData.clientId || !user?.agency_id) return
+    if (demoMode) {
+      setProductUploads([{ name: 'Demo mode is read-only', status: 'error', message: 'sign in to upload' }])
+      return
+    }
+    for (const file of Array.from(files)) {
+      setProductUploads((prev) => [...prev, { name: file.name, status: 'uploading' }])
+      try {
+        await uploadClientAsset(user.agency_id, formData.clientId, 'product_image', file)
+        setProductUploads((prev) => prev.map((u) => (u.name === file.name && u.status === 'uploading' ? { ...u, status: 'done' } : u)))
+      } catch (err) {
+        setProductUploads((prev) =>
+          prev.map((u) =>
+            u.name === file.name && u.status === 'uploading'
+              ? { ...u, status: 'error', message: err instanceof Error ? err.message : 'upload failed' }
+              : u,
+          ),
+        )
+      }
+    }
+  }
 
   const updateField = (field: string, value: string | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -223,6 +254,61 @@ export default function NewProjectPage() {
               className={inputCls}
               placeholder="What are we promoting in this campaign?"
             />
+          </div>
+
+          {/* Product photos — the generation pipeline shoots from these */}
+          <div>
+            <label className="block text-sm font-heading text-brand-400 mb-2">
+              Product Photos <span className="text-brand-700">(recommended for physical products)</span>
+            </label>
+            <label
+              className={`flex flex-col items-center justify-center gap-1.5 border border-dashed rounded-xl px-4 py-6 transition-colors ${
+                formData.clientId
+                  ? 'border-white/15 hover:border-white/30 cursor-pointer bg-brand-900/40'
+                  : 'border-white/10 bg-brand-900/20 opacity-50 cursor-not-allowed'
+              }`}
+            >
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                disabled={!formData.clientId}
+                className="hidden"
+                onChange={(e) => {
+                  handleProductPhotos(e.target.files)
+                  e.target.value = ''
+                }}
+              />
+              <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span className="text-brand-400 text-xs font-heading">
+                {formData.clientId ? 'Click to add product photos (multiple allowed)' : 'Select a client first'}
+              </span>
+              <span className="text-brand-700 text-[11px] font-body text-center">
+                One clean photo per product — e.g. a jewelry brand adds its earrings, rings and necklaces separately. The AI shoots each script from the matching photo.
+              </span>
+            </label>
+            {productUploads.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {productUploads.map((u, i) => (
+                  <li key={`${u.name}-${i}`} className="flex items-center gap-2 text-xs font-body">
+                    {u.status === 'uploading' && (
+                      <span className="w-3 h-3 rounded-full border-2 border-blue-400/25 border-t-blue-400 animate-spin shrink-0" />
+                    )}
+                    {u.status === 'done' && <span className="text-green-400 shrink-0">✓</span>}
+                    {u.status === 'error' && <span className="text-red-400 shrink-0">✕</span>}
+                    <span className={u.status === 'error' ? 'text-red-400' : 'text-brand-400'}>
+                      {u.name}
+                      {u.message ? ` — ${u.message}` : ''}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="text-brand-700 text-[11px] font-body mt-1.5">
+              Photos save to this client&apos;s library (Media Library → Uploads), so future campaigns reuse them.
+            </p>
           </div>
 
           <div>
@@ -505,7 +591,7 @@ export default function NewProjectPage() {
           </div>
 
           <p className="text-brand-600 text-xs font-body bg-brand-900/40 border border-white/5 rounded-lg px-4 py-3">
-            💡 Brand logo, product images, and fonts are uploaded per client in{' '}
+            💡 Product photos were added in Step 1. Brand logo, extra photos, and fonts live per client in{' '}
             <Link to="/dashboard/library" className="text-brand-400 hover:text-white underline transition-colors">Media Library → Uploads</Link>{' '}
             — the generation pipeline picks them up from there.
           </p>

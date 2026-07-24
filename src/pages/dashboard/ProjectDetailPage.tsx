@@ -41,6 +41,8 @@ export default function ProjectDetailPage() {
   const [failedJob, setFailedJob] = useState<Job | null>(null)
   // stages with an AI job currently queued/running → drives the "thinking" UI
   const [activeRuns, setActiveRuns] = useState<Map<WorkflowStage, 'llm_generate' | 'llm_revise'>>(new Map())
+  // the latest automated-shoot job — ShootControl mirrors its live status
+  const [shootJob, setShootJob] = useState<Job | null>(null)
 
   const stagesByKey = useMemo(() => {
     const map = new Map<WorkflowStage, ProjectStage>()
@@ -76,6 +78,13 @@ export default function ProjectDetailPage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'project_stages', filter: `project_id=eq.${id}` }, () => reload())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs', filter: `project_id=eq.${id}` }, (payload) => {
         const row = payload.new as { status?: string; error?: string; stage?: string; type?: string }
+        // the automated shoot has its own control — mirror it there, not in
+        // the LLM "thinking" UI / failure banner
+        if (row?.type === 'shoot_run') {
+          setShootJob(row as Job)
+          reload()
+          return
+        }
         if (row?.stage) {
           const stage = row.stage as WorkflowStage
           setActiveRuns((prev) => {
@@ -104,11 +113,20 @@ export default function ProjectDetailPage() {
         setActiveRuns((prev) => {
           const next = new Map(prev)
           jobs.forEach((j) => {
+            if (j.type === 'shoot_run') return // ShootControl shows this one
             if (j.stage) next.set(j.stage as WorkflowStage, j.type === 'llm_revise' ? 'llm_revise' : 'llm_generate')
           })
           return next
         })
       })
+      .catch(() => undefined)
+  }, [demoMode, id])
+
+  // seed the shoot status on load (Realtime only covers changes after mount)
+  useEffect(() => {
+    if (demoMode || !id || !isSupabaseConfigured()) return
+    getLatestStageJob(id, 'shooting')
+      .then((j) => { if (j?.type === 'shoot_run') setShootJob(j) })
       .catch(() => undefined)
   }, [demoMode, id])
 
@@ -527,6 +545,7 @@ export default function ProjectDetailPage() {
                   <ShootControl
                     projectId={project.id}
                     shootplanDone={stagesByKey.get('shootplan')?.status === 'completed'}
+                    job={shootJob}
                   />
                 ) : editingText !== null ? (
                   <>
