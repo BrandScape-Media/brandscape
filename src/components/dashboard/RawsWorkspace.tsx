@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type 
 import { useAuth } from '../../context/AuthContext'
 import { useAgency } from '../../hooks/useData'
 import { plans } from '../../data/plans'
+import MediaViewer from './MediaViewer'
 import { listProjectAssets } from '../../lib/api'
 import { generateRaws, regenerateShot, regenerateVo, type RawsPhase } from '../../lib/orchestrator'
 import { getSupabase, isSupabaseConfigured } from '../../lib/supabase/client'
@@ -47,6 +48,7 @@ export default function RawsWorkspace({
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null) // asset/phase key currently acted on
   const [voEdits, setVoEdits] = useState<Record<string, string>>({})
+  const [viewing, setViewing] = useState<MediaAsset | null>(null) // open in the shared review viewer
 
   // Each Raws action spends one monthly "regeneration" credit (enforced
   // server-side). Show what's left so the cap is never a surprise; hidden for
@@ -176,9 +178,15 @@ export default function RawsWorkspace({
       {/* Tab body */}
       {tab === 'audio'
         ? <AudioGrid assets={groups.audio} busy={busy} voEdits={voEdits} setVoEdits={setVoEdits}
+            onView={setViewing}
             onRegen={(voId, text) => act(`vo-${voId}`, () => regenerateVo(projectId, voId, text))} />
         : <MediaGrid tab={tab} assets={groups[tab]} busy={busy}
+            onView={setViewing}
             onRegen={(shotId) => act(`shot-${shotId}`, () => regenerateShot(projectId, shotId))} />}
+
+      {/* Shared review viewer — same lightbox + comments as the Library, keyed
+          by asset id, so notes left here are visible there and vice-versa. */}
+      {viewing && <MediaViewer asset={viewing} onClose={() => setViewing(null)} />}
     </div>
   )
 }
@@ -193,11 +201,12 @@ function StatusBadge({ status }: { status: MediaAsset['status'] }) {
   )
 }
 
-function MediaGrid({ tab, assets, busy, onRegen }: {
+function MediaGrid({ tab, assets, busy, onRegen, onView }: {
   tab: 'images' | 'video'
   assets: MediaAsset[]
   busy: string | null
   onRegen: (shotId: string) => void
+  onView: (a: MediaAsset) => void
 }) {
   if (assets.length === 0) {
     return <p className="text-brand-600 text-xs font-body py-6 text-center">No {tab} yet — use “Generate all {tab === 'images' ? 'Images' : 'Video'}”.</p>
@@ -215,7 +224,7 @@ function MediaGrid({ tab, assets, busy, onRegen }: {
               {a.status === 'completed' && a.url && (
                 tab === 'video'
                   ? <video src={a.url} controls className="w-full h-full object-cover" />
-                  : <img src={a.thumbnail_url || a.url} alt={label} className="w-full h-full object-cover" />
+                  : <img src={a.thumbnail_url || a.url} alt={label} onClick={() => onView(a)} className="w-full h-full object-cover cursor-pointer" />
               )}
               {a.status === 'failed' && <span className="text-red-400/70 text-[10px] font-body px-3 text-center">{a.metadata?.error ?? 'generation failed'}</span>}
             </div>
@@ -224,15 +233,26 @@ function MediaGrid({ tab, assets, busy, onRegen }: {
                 <p className="text-white text-[11px] font-heading truncate">{label}</p>
                 {a.metadata?.workflow && <p className="text-brand-600 text-[10px] font-body">{a.metadata.workflow}</p>}
               </div>
-              {shotId && (
-                <button
-                  onClick={() => onRegen(shotId)}
-                  disabled={regenning}
-                  className="shrink-0 px-2 py-1 rounded-md border border-white/15 text-brand-300 hover:text-white hover:border-white/30 text-[10px] font-heading transition-colors disabled:opacity-40"
-                >
-                  {regenning ? '…' : 'Regenerate'}
-                </button>
-              )}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {a.status === 'completed' && a.url && (
+                  <button
+                    onClick={() => onView(a)}
+                    title="View full size + comments"
+                    className="px-2 py-1 rounded-md border border-white/15 text-brand-300 hover:text-white hover:border-white/30 text-[10px] font-heading transition-colors"
+                  >
+                    View
+                  </button>
+                )}
+                {shotId && (
+                  <button
+                    onClick={() => onRegen(shotId)}
+                    disabled={regenning}
+                    className="px-2 py-1 rounded-md border border-white/15 text-brand-300 hover:text-white hover:border-white/30 text-[10px] font-heading transition-colors disabled:opacity-40"
+                  >
+                    {regenning ? '…' : 'Regenerate'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )
@@ -241,12 +261,13 @@ function MediaGrid({ tab, assets, busy, onRegen }: {
   )
 }
 
-function AudioGrid({ assets, busy, voEdits, setVoEdits, onRegen }: {
+function AudioGrid({ assets, busy, voEdits, setVoEdits, onRegen, onView }: {
   assets: MediaAsset[]
   busy: string | null
   voEdits: Record<string, string>
   setVoEdits: Dispatch<SetStateAction<Record<string, string>>>
   onRegen: (voId: string, text?: string) => void
+  onView: (a: MediaAsset) => void
 }) {
   if (assets.length === 0) {
     return <p className="text-brand-600 text-xs font-body py-6 text-center">No voiceovers yet — use “Generate all Audio”. (They also auto-generate when the Shoot Plan lands.)</p>
@@ -268,13 +289,24 @@ function AudioGrid({ assets, busy, voEdits, setVoEdits, onRegen }: {
                 {a.status === 'generating' && <span className="text-blue-300 text-[10px] font-body flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" /> generating</span>}
                 {a.status === 'failed' && <span className="text-red-400 text-[10px] font-body">failed</span>}
               </div>
-              <button
-                onClick={() => onRegen(voId, dirty ? edited : undefined)}
-                disabled={regenning || !voId}
-                className="shrink-0 px-2.5 py-1 rounded-md border border-white/15 text-brand-300 hover:text-white hover:border-white/30 text-[10px] font-heading transition-colors disabled:opacity-40"
-              >
-                {regenning ? 'Generating…' : dirty ? 'Save & Regenerate' : 'Regenerate'}
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {a.status === 'completed' && a.url && (
+                  <button
+                    onClick={() => onView(a)}
+                    title="Play + comments"
+                    className="px-2.5 py-1 rounded-md border border-white/15 text-brand-300 hover:text-white hover:border-white/30 text-[10px] font-heading transition-colors"
+                  >
+                    Comments
+                  </button>
+                )}
+                <button
+                  onClick={() => onRegen(voId, dirty ? edited : undefined)}
+                  disabled={regenning || !voId}
+                  className="px-2.5 py-1 rounded-md border border-white/15 text-brand-300 hover:text-white hover:border-white/30 text-[10px] font-heading transition-colors disabled:opacity-40"
+                >
+                  {regenning ? 'Generating…' : dirty ? 'Save & Regenerate' : 'Regenerate'}
+                </button>
+              </div>
             </div>
             {a.status === 'completed' && a.url && <audio src={a.url} controls className="w-full h-9 mb-2" />}
             <textarea

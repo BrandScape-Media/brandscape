@@ -405,7 +405,15 @@ function GeneratedTab() {
   const [clientFilter, setClientFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [viewing, setViewing] = useState<MediaAsset | null>(null)
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set()) // collapsed project folders
   const { data: assets, loading, error } = useAssets()
+
+  const toggleFolder = (id: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
 
   const all = assets ?? []
   const clientNames = useMemo(
@@ -425,16 +433,18 @@ function GeneratedTab() {
   // clip belongs to. Insertion order ≈ most-recently-active first (assets
   // arrive newest-first). Client name may be absent (e.g. demo data).
   const groups = useMemo(() => {
-    const map = new Map<string, { projectName: string; clientName?: string; assets: MediaAsset[] }>()
+    const map = new Map<string, { id: string; projectName: string; clientName?: string; assets: MediaAsset[] }>()
     for (const a of filtered) {
       if (!map.has(a.project_id)) {
-        map.set(a.project_id, { projectName: a.project_name ?? 'Untitled project', clientName: a.client_name, assets: [] })
+        map.set(a.project_id, { id: a.project_id, projectName: a.project_name ?? 'Untitled project', clientName: a.client_name, assets: [] })
       }
       map.get(a.project_id)!.assets.push(a)
     }
     return [...map.values()]
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, clientFilter, search, all])
+
+  const allCollapsed = groups.length > 0 && groups.every((g) => collapsed.has(g.id))
 
   const typeConfig: Record<string, { icon: string; bg: string; bgGen: string }> = {
     image: {
@@ -508,6 +518,15 @@ function GeneratedTab() {
             className="w-full pl-10 pr-4 py-2.5 bg-brand-900/30 border border-white/5 rounded-xl text-white font-body text-sm placeholder:text-brand-700 focus:outline-none focus:border-white/20 transition-colors"
           />
         </div>
+
+        {groups.length > 1 && (
+          <button
+            onClick={() => setCollapsed(allCollapsed ? new Set() : new Set(groups.map((g) => g.id)))}
+            className="shrink-0 px-3.5 py-2.5 rounded-xl border border-white/5 bg-brand-900/30 text-brand-400 hover:text-white hover:border-white/20 text-xs font-heading tracking-wide transition-colors"
+          >
+            {allCollapsed ? 'Expand all' : 'Collapse all'}
+          </button>
+        )}
       </div>
 
       {/* Assets Grid */}
@@ -519,25 +538,36 @@ function GeneratedTab() {
         </div>
       ) : groups.length > 0 ? (
         <div className="space-y-8">
-          {groups.map((g) => (
-            <section key={g.projectName + (g.clientName ?? '')}>
-              {/* Folder header — client · project */}
-              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/5">
-                <svg className="w-4 h-4 text-brand-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                </svg>
-                <h2 className="font-heading font-bold text-sm text-white truncate">
-                  {g.clientName && <span className="text-brand-400">{g.clientName} · </span>}{g.projectName}
-                </h2>
-                <span className="text-brand-600 text-xs font-heading shrink-0">{g.assets.length}</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {g.assets.map((asset) => (
-                  <AssetCard key={asset.id} asset={asset} config={typeConfig[asset.type]} onView={setViewing} />
-                ))}
-              </div>
-            </section>
-          ))}
+          {groups.map((g) => {
+            const isCollapsed = collapsed.has(g.id)
+            return (
+              <section key={g.id}>
+                {/* Folder header — click to collapse/expand this project */}
+                <button
+                  onClick={() => toggleFolder(g.id)}
+                  className="w-full flex items-center gap-2 mb-3 pb-2 border-b border-white/5 text-left group/folder"
+                >
+                  <svg className={`w-3.5 h-3.5 text-brand-500 shrink-0 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                  <svg className="w-4 h-4 text-brand-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                  </svg>
+                  <h2 className="font-heading font-bold text-sm text-white truncate group-hover/folder:text-brand-200 transition-colors">
+                    {g.clientName && <span className="text-brand-400">{g.clientName} · </span>}{g.projectName}
+                  </h2>
+                  <span className="text-brand-600 text-xs font-heading shrink-0 ml-auto">{g.assets.length}</span>
+                </button>
+                {!isCollapsed && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {g.assets.map((asset) => (
+                      <AssetCard key={asset.id} asset={asset} config={typeConfig[asset.type]} onView={setViewing} />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )
+          })}
         </div>
       ) : (
         <div className="text-center py-20">
