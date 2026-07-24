@@ -402,18 +402,39 @@ function UploadModal({ clients, onClose, onUploaded, demoMode, agencyId, remaini
 
 function GeneratedTab() {
   const [filter, setFilter] = useState<MediaType>('all')
+  const [clientFilter, setClientFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [viewing, setViewing] = useState<MediaAsset | null>(null)
   const { data: assets, loading, error } = useAssets()
 
   const all = assets ?? []
+  const clientNames = useMemo(
+    () => [...new Set(all.map((a) => a.client_name).filter((n): n is string => !!n))].sort(),
+    [all],
+  )
   const filtered = all.filter((a) => {
     if (filter !== 'all' && a.type !== filter) return false
+    if (clientFilter !== 'all' && a.client_name !== clientFilter) return false
     const name = a.metadata?.name ?? ''
     const project = a.project_name ?? ''
     if (search && !name.toLowerCase().includes(search.toLowerCase()) && !project.toLowerCase().includes(search.toLowerCase())) return false
     return true
   })
+
+  // Group into per-project "folders" so it's clear which client/project each
+  // clip belongs to. Insertion order ≈ most-recently-active first (assets
+  // arrive newest-first). Client name may be absent (e.g. demo data).
+  const groups = useMemo(() => {
+    const map = new Map<string, { projectName: string; clientName?: string; assets: MediaAsset[] }>()
+    for (const a of filtered) {
+      if (!map.has(a.project_id)) {
+        map.set(a.project_id, { projectName: a.project_name ?? 'Untitled project', clientName: a.client_name, assets: [] })
+      }
+      map.get(a.project_id)!.assets.push(a)
+    }
+    return [...map.values()]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, clientFilter, search, all])
 
   const typeConfig: Record<string, { icon: string; bg: string; bgGen: string }> = {
     image: {
@@ -460,6 +481,20 @@ function GeneratedTab() {
           ))}
         </div>
 
+        {/* Client filter (folders are per-project; this narrows to one client) */}
+        {clientNames.length > 1 && (
+          <select
+            value={clientFilter}
+            onChange={(e) => setClientFilter(e.target.value)}
+            className="px-4 py-2.5 bg-brand-900/30 border border-white/5 rounded-xl text-white font-body text-sm focus:outline-none focus:border-white/20 transition-colors"
+          >
+            <option value="all">All clients</option>
+            {clientNames.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        )}
+
         {/* Search */}
         <div className="relative flex-1 max-w-sm">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -482,98 +517,27 @@ function GeneratedTab() {
             <div key={i} className="bg-brand-900/20 border border-white/5 rounded-xl aspect-[4/3] animate-pulse" />
           ))}
         </div>
-      ) : filtered.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((asset) => {
-            const config = typeConfig[asset.type]
-            const name = asset.metadata?.name ?? `${asset.type} asset`
-            const viewable = asset.status === 'completed' && !!asset.url && asset.url !== '#'
-            return (
-              <div
-                key={asset.id}
-                className="bg-brand-900/20 border border-white/5 rounded-xl overflow-hidden hover:border-white/10 transition-all duration-300 group"
-              >
-                {/* Preview Area — click to open the viewer */}
-                <div
-                  className={`aspect-video ${config.bg} flex items-center justify-center relative ${viewable ? 'cursor-pointer' : ''}`}
-                  onClick={() => viewable && setViewing(asset)}
-                >
-                  {asset.thumbnail_url ? (
-                    <img src={asset.thumbnail_url} alt={name} className="absolute inset-0 w-full h-full object-cover" />
-                  ) : asset.type === 'video' && viewable ? (
-                    <video src={asset.url} preload="metadata" muted playsInline className="absolute inset-0 w-full h-full object-cover" />
-                  ) : (
-                    <svg className="w-10 h-10 text-white/10 group-hover:text-white/20 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d={config.icon} />
-                    </svg>
-                  )}
-
-                  {asset.status === 'generating' && (
-                    <div className="absolute inset-0 bg-brand-950/60 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3">
-                      <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                      <span className="text-brand-300 text-xs font-heading tracking-wide">GENERATING</span>
-                    </div>
-                  )}
-
-                  {/* Hover Overlay */}
-                  {viewable && (
-                    <div className="absolute inset-0 bg-brand-950/0 group-hover:bg-brand-950/30 transition-all duration-300 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setViewing(asset)
-                        }}
-                        className="px-4 py-2.5 bg-white text-black font-heading font-bold text-xs tracking-wide rounded-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300"
-                      >
-                        VIEW
-                      </button>
-                      <a
-                        href={asset.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        download
-                        onClick={(e) => e.stopPropagation()}
-                        className="px-4 py-2.5 border border-white/25 bg-brand-950/40 text-white font-heading font-bold text-xs tracking-wide rounded-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:border-white/50"
-                      >
-                        DOWNLOAD
-                      </a>
-                    </div>
-                  )}
-
-                  {/* Type Badge */}
-                  {asset.metadata?.format && (
-                    <div className="absolute top-3 left-3">
-                      <span className={`px-2 py-1 rounded-md text-[9px] font-heading font-bold tracking-wider ${config.bgGen} text-white/60 border border-white/5`}>
-                        {asset.metadata.format}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="p-4">
-                  <h3 className="font-heading font-semibold text-sm text-white truncate group-hover:text-brand-200 transition-colors">
-                    {name}
-                  </h3>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-brand-600 text-xs font-body truncate max-w-[60%]">{asset.project_name ?? '—'}</span>
-                    {asset.metadata?.size && <span className="text-brand-700 text-[10px] font-heading">{asset.metadata.size}</span>}
-                  </div>
-                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/[0.03]">
-                    <span className={`text-[10px] font-heading tracking-wider flex items-center gap-1.5 ${
-                      asset.status === 'completed' ? 'text-green-500/80' : asset.status === 'failed' ? 'text-red-400' : 'text-blue-400'
-                    }`}>
-                      <div className={`w-1.5 h-1.5 rounded-full ${
-                        asset.status === 'completed' ? 'bg-green-500' : asset.status === 'failed' ? 'bg-red-500' : 'bg-blue-500 animate-pulse'
-                      }`} />
-                      {asset.status === 'completed' ? 'READY' : asset.status === 'failed' ? 'FAILED' : 'GENERATING'}
-                    </span>
-                    <span className="text-brand-700 text-[10px] font-body">{timeAgo(asset.created_at)}</span>
-                  </div>
-                </div>
+      ) : groups.length > 0 ? (
+        <div className="space-y-8">
+          {groups.map((g) => (
+            <section key={g.projectName + (g.clientName ?? '')}>
+              {/* Folder header — client · project */}
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/5">
+                <svg className="w-4 h-4 text-brand-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                </svg>
+                <h2 className="font-heading font-bold text-sm text-white truncate">
+                  {g.clientName && <span className="text-brand-400">{g.clientName} · </span>}{g.projectName}
+                </h2>
+                <span className="text-brand-600 text-xs font-heading shrink-0">{g.assets.length}</span>
               </div>
-            )
-          })}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {g.assets.map((asset) => (
+                  <AssetCard key={asset.id} asset={asset} config={typeConfig[asset.type]} onView={setViewing} />
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
       ) : (
         <div className="text-center py-20">
@@ -595,6 +559,99 @@ function GeneratedTab() {
 
       {/* Media viewer */}
       {viewing && <MediaViewer asset={viewing} onClose={() => setViewing(null)} />}
+    </div>
+  )
+}
+
+/** One generated-asset card (preview + hover actions + status), used inside
+ *  each per-project folder in the Generated tab. */
+function AssetCard({ asset, config, onView }: {
+  asset: MediaAsset
+  config: { icon: string; bg: string; bgGen: string }
+  onView: (a: MediaAsset) => void
+}) {
+  const name = asset.metadata?.name ?? `${asset.type} asset`
+  const viewable = asset.status === 'completed' && !!asset.url && asset.url !== '#'
+  return (
+    <div className="bg-brand-900/20 border border-white/5 rounded-xl overflow-hidden hover:border-white/10 transition-all duration-300 group">
+      {/* Preview Area — click to open the viewer */}
+      <div
+        className={`aspect-video ${config.bg} flex items-center justify-center relative ${viewable ? 'cursor-pointer' : ''}`}
+        onClick={() => viewable && onView(asset)}
+      >
+        {asset.thumbnail_url ? (
+          <img src={asset.thumbnail_url} alt={name} className="absolute inset-0 w-full h-full object-cover" />
+        ) : asset.type === 'video' && viewable ? (
+          <video src={asset.url} preload="metadata" muted playsInline className="absolute inset-0 w-full h-full object-cover" />
+        ) : (
+          <svg className="w-10 h-10 text-white/10 group-hover:text-white/20 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d={config.icon} />
+          </svg>
+        )}
+
+        {asset.status === 'generating' && (
+          <div className="absolute inset-0 bg-brand-950/60 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3">
+            <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+            <span className="text-brand-300 text-xs font-heading tracking-wide">GENERATING</span>
+          </div>
+        )}
+
+        {/* Hover Overlay */}
+        {viewable && (
+          <div className="absolute inset-0 bg-brand-950/0 group-hover:bg-brand-950/30 transition-all duration-300 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onView(asset)
+              }}
+              className="px-4 py-2.5 bg-white text-black font-heading font-bold text-xs tracking-wide rounded-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300"
+            >
+              VIEW
+            </button>
+            <a
+              href={asset.url}
+              target="_blank"
+              rel="noreferrer"
+              download
+              onClick={(e) => e.stopPropagation()}
+              className="px-4 py-2.5 border border-white/25 bg-brand-950/40 text-white font-heading font-bold text-xs tracking-wide rounded-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:border-white/50"
+            >
+              DOWNLOAD
+            </a>
+          </div>
+        )}
+
+        {/* Type Badge */}
+        {asset.metadata?.format && (
+          <div className="absolute top-3 left-3">
+            <span className={`px-2 py-1 rounded-md text-[9px] font-heading font-bold tracking-wider ${config.bgGen} text-white/60 border border-white/5`}>
+              {asset.metadata.format}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="p-4">
+        <h3 className="font-heading font-semibold text-sm text-white truncate group-hover:text-brand-200 transition-colors">
+          {name}
+        </h3>
+        <div className="flex items-center justify-between mt-2">
+          <span className="text-brand-600 text-xs font-body truncate max-w-[60%]">{asset.project_name ?? '—'}</span>
+          {asset.metadata?.size && <span className="text-brand-700 text-[10px] font-heading">{asset.metadata.size}</span>}
+        </div>
+        <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/[0.03]">
+          <span className={`text-[10px] font-heading tracking-wider flex items-center gap-1.5 ${
+            asset.status === 'completed' ? 'text-green-500/80' : asset.status === 'failed' ? 'text-red-400' : 'text-blue-400'
+          }`}>
+            <div className={`w-1.5 h-1.5 rounded-full ${
+              asset.status === 'completed' ? 'bg-green-500' : asset.status === 'failed' ? 'bg-red-500' : 'bg-blue-500 animate-pulse'
+            }`} />
+            {asset.status === 'completed' ? 'READY' : asset.status === 'failed' ? 'FAILED' : 'GENERATING'}
+          </span>
+          <span className="text-brand-700 text-[10px] font-body">{timeAgo(asset.created_at)}</span>
+        </div>
+      </div>
     </div>
   )
 }

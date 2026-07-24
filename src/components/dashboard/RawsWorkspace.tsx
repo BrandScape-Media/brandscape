@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { useAgency } from '../../hooks/useData'
+import { plans } from '../../data/plans'
 import { listProjectAssets } from '../../lib/api'
 import { generateRaws, regenerateShot, regenerateVo, type RawsPhase } from '../../lib/orchestrator'
 import { getSupabase, isSupabaseConfigured } from '../../lib/supabase/client'
@@ -39,11 +41,22 @@ export default function RawsWorkspace({
   job?: Job | null
 }) {
   const { demoMode } = useAuth()
+  const { data: agency, reload: reloadAgency } = useAgency()
   const [assets, setAssets] = useState<MediaAsset[]>([])
   const [tab, setTab] = useState<Tab>('images')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null) // asset/phase key currently acted on
   const [voEdits, setVoEdits] = useState<Record<string, string>>({})
+
+  // Each Raws action spends one monthly "regeneration" credit (enforced
+  // server-side). Show what's left so the cap is never a surprise; hidden for
+  // unlimited (enterprise) and in demo mode.
+  const regenLeft = useMemo(() => {
+    if (demoMode || !agency) return null
+    const limit = plans.find((p) => p.tier === agency.plan)?.regenerationsPerMonth
+    if (limit == null || limit >= 900_000) return null
+    return { left: Math.max(0, limit - (agency.usage_regenerations ?? 0)), limit }
+  }, [demoMode, agency])
 
   const reload = useCallback(() => {
     if (demoMode || !isSupabaseConfigured()) return
@@ -79,7 +92,7 @@ export default function RawsWorkspace({
     if (demoMode) { setError('Demo mode is read-only — sign in to generate.'); return }
     setBusy(key)
     setError(null)
-    try { await fn(); reload() } catch (err) { setError(err instanceof Error ? err.message : 'Something went wrong.') } finally { setBusy(null) }
+    try { await fn(); reload(); reloadAgency() } catch (err) { setError(err instanceof Error ? err.message : 'Something went wrong.') } finally { setBusy(null) }
   }
 
   if (!shootplanDone) {
@@ -94,8 +107,8 @@ export default function RawsWorkspace({
 
   return (
     <div className="w-full">
-      {/* Tabs + generate-all */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+      {/* Tabs + the per-tab primary action (Generate all <Tab>) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <div className="flex items-center gap-1 p-1 rounded-lg bg-brand-900/40 border border-white/5">
           {TABS.map((t) => (
             <button
@@ -110,22 +123,40 @@ export default function RawsWorkspace({
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => act(`all`, () => generateRaws(projectId, 'all'))}
-            disabled={!!busy || phaseRunning}
-            className="px-3.5 py-2 border border-white/15 text-white font-heading font-bold text-[11px] tracking-wide rounded-lg hover:border-white/30 transition-colors disabled:opacity-40"
-          >
-            Generate Everything
-          </button>
-          <button
-            onClick={() => act(`phase-${tab}`, () => generateRaws(projectId, TABS.find((t) => t.key === tab)!.phase))}
-            disabled={!!busy || phaseRunning}
-            className="ai-glow px-4 py-2 bg-white text-black font-heading font-bold text-[11px] tracking-wide rounded-lg hover:bg-brand-200 transition-colors disabled:opacity-40"
-          >
-            Generate all {TABS.find((t) => t.key === tab)!.label}
-          </button>
+        <button
+          onClick={() => act(`phase-${tab}`, () => generateRaws(projectId, TABS.find((t) => t.key === tab)!.phase))}
+          disabled={!!busy || phaseRunning}
+          className="ai-glow px-4 py-2 bg-white text-black font-heading font-bold text-[11px] tracking-wide rounded-lg hover:bg-brand-200 transition-colors disabled:opacity-40"
+        >
+          Generate all {TABS.find((t) => t.key === tab)!.label}
+        </button>
+      </div>
+
+      {/* Full-shoot action, set apart from the per-tab button so the two are
+          never confused; plus this month's regeneration budget. */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4 px-3.5 py-2.5 rounded-lg border border-dashed border-white/10 bg-brand-900/20">
+        <div className="flex items-center gap-2 min-w-0">
+          <p className="text-brand-500 text-[11px] font-body">
+            Or run the whole shoot in order — images, then audio, then video.
+          </p>
+          {regenLeft && (
+            <span
+              title="Each regenerate or generate run uses one credit; resets monthly."
+              className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-heading ${
+                regenLeft.left === 0 ? 'bg-red-500/15 text-red-300' : regenLeft.left <= 10 ? 'bg-amber-500/15 text-amber-300' : 'bg-white/[0.06] text-brand-400'
+              }`}
+            >
+              {regenLeft.left}/{regenLeft.limit} regenerations left
+            </span>
+          )}
         </div>
+        <button
+          onClick={() => act('all', () => generateRaws(projectId, 'all'))}
+          disabled={!!busy || phaseRunning}
+          className="shrink-0 px-3.5 py-1.5 border border-white/15 text-brand-300 hover:text-white hover:border-white/30 font-heading font-bold text-[11px] tracking-wide rounded-lg transition-colors disabled:opacity-40"
+        >
+          Generate Everything
+        </button>
       </div>
 
       {/* Live phase-job status */}

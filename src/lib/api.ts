@@ -462,12 +462,12 @@ export async function listProjectAssets(projectId: string): Promise<MediaAsset[]
 export async function listAssets(): Promise<MediaAsset[]> {
   const { data, error } = await getSupabase()
     .from('media_assets')
-    .select('*, projects!inner(name)')
+    .select('*, projects!inner(name, clients(name))')
     .order('created_at', { ascending: false })
   if (error) throw error
   const assets: MediaAsset[] = (data ?? []).map((row) => {
     const { projects, ...rest } = row
-    return { ...rest, project_name: projects?.name }
+    return { ...rest, project_name: projects?.name, client_name: projects?.clients?.name }
   })
 
   // generated media lives on R2 (url = object key) — swap in short-lived

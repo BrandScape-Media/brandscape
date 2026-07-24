@@ -18,6 +18,7 @@ export const demoAgency: Agency = {
   trial_ends_at: null,
   usage_generations: 47,
   usage_revisions: 12,
+  usage_regenerations: 63,
   usage_storage: 2.4 * 1024 * 1024 * 1024,
   billing_cycle_start: daysAgo(11),
   created_at: daysAgo(60),

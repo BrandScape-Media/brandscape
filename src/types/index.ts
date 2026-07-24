@@ -19,6 +19,7 @@ export interface Agency {
   trial_ends_at?: string | null
   usage_generations: number
   usage_revisions: number
+  usage_regenerations: number
   usage_storage: number
   billing_cycle_start?: string | null
   created_at: string
@@ -42,6 +43,8 @@ export interface Plan {
   revisionsIncluded: number
   projectsIncluded: number
   generationsPerMonth: number
+  /** Raws media actions/month (regenerate a card, "generate all/everything") */
+  regenerationsPerMonth: number
   storageGb: number
   prioritySupport: boolean
   customWorkflows: boolean
@@ -238,6 +241,8 @@ export interface MediaAsset {
   created_at: string
   /** joined from projects(name) */
   project_name?: string
+  /** joined from projects(clients(name)) */
+  client_name?: string
 }
 
 /** Internal agency-team feedback on a generated asset (media_comments table). */
