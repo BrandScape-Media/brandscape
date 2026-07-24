@@ -289,6 +289,53 @@ export async function adminDeleteMedia(assetId: string): Promise<void> {
   await orThrow(await post(`/v1/admin/media/${assetId}/delete`))
 }
 
+// ===== Product photos on an existing project (staff) =====
+
+export interface AdminProductPhoto {
+  id: string
+  name: string
+  storage_path: string
+  storage_provider: string
+  file_size: number | null
+  created_at: string
+  view_url: string | null
+}
+
+/** The client's product photos behind a project, with preview URLs. */
+export async function adminListProductPhotos(
+  projectId: string,
+): Promise<{ client_name: string; client_id: string; photos: AdminProductPhoto[] }> {
+  const res = await orThrow(await get(`/v1/admin/projects/${projectId}/product-photos`))
+  return res.json()
+}
+
+/** Add a product photo to the project's client library, cross-agency. */
+export async function adminUploadProductPhoto(projectId: string, file: File): Promise<void> {
+  const contentType = file.type || 'application/octet-stream'
+  const presignRes = await orThrow(
+    await post(`/v1/admin/projects/${projectId}/product-photos/presign`, {
+      fileName: file.name,
+      contentType,
+      sizeBytes: file.size,
+    }),
+  )
+  const { url, key } = await presignRes.json()
+  const putRes = await fetch(url, { method: 'PUT', headers: { 'Content-Type': contentType }, body: file })
+  if (!putRes.ok) throw new Error(`Upload to storage failed (${putRes.status})`)
+  await orThrow(
+    await post(`/v1/admin/projects/${projectId}/product-photos/record`, {
+      key,
+      fileName: file.name,
+      sizeBytes: file.size,
+      contentType,
+    }),
+  )
+}
+
+export async function adminDeleteProductPhoto(assetId: string): Promise<void> {
+  await orThrow(await post(`/v1/admin/product-photos/${assetId}/delete`))
+}
+
 // ===== AI Playground (staff testbed: LLM + web tools + voice) =====
 
 export interface OrchestratorHealth {

@@ -165,16 +165,11 @@ function ClientModal({ client, onSave, onClose }: {
     website: client?.website ?? '',
     target_audience: client?.target_audience ?? '',
   })
-  const [colors, setColors] = useState((kit.colors ?? []).join(', '))
+  const [colors, setColors] = useState<string[]>(normalizeColors(kit.colors ?? []))
   const [motto, setMotto] = useState(kit.motto ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const parsedColors = colors
-    .split(/[,\s]+/)
-    .map((c) => c.trim())
-    .filter((c) => /^#?[0-9a-fA-F]{3,8}$/.test(c))
-    .map((c) => (c.startsWith('#') ? c : `#${c}`))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -185,7 +180,7 @@ function ClientModal({ client, onSave, onClose }: {
       await onSave({
         ...form,
         name: form.name.trim(),
-        brand_guidelines: { ...(client?.brand_guidelines ?? {}), colors: parsedColors, motto: motto.trim() },
+        brand_guidelines: { ...(client?.brand_guidelines ?? {}), colors: normalizeColors(colors), motto: motto.trim() },
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save the client.')
@@ -241,34 +236,16 @@ function ClientModal({ client, onSave, onClose }: {
               placeholder="Who is this brand talking to?"
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-heading text-brand-400 mb-2">Brand Colors</label>
-              <input
-                type="text"
-                value={colors}
-                onChange={(e) => setColors(e.target.value)}
-                className="w-full px-4 py-3 bg-brand-900 border border-white/10 rounded-lg text-white font-body text-sm placeholder:text-brand-700 focus:outline-none focus:border-white/30 transition-colors"
-                placeholder="#FF5733, #1A1A2E"
-              />
-              {parsedColors.length > 0 && (
-                <div className="flex items-center gap-1.5 mt-2">
-                  {parsedColors.map((c, i) => (
-                    <span key={i} title={c} className="w-5 h-5 rounded-md border border-white/15" style={{ backgroundColor: c }} />
-                  ))}
-                </div>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-heading text-brand-400 mb-2">Brand Motto</label>
-              <input
-                type="text"
-                value={motto}
-                onChange={(e) => setMotto(e.target.value)}
-                className="w-full px-4 py-3 bg-brand-900 border border-white/10 rounded-lg text-white font-body text-sm placeholder:text-brand-700 focus:outline-none focus:border-white/30 transition-colors"
-                placeholder='e.g., "Think Different"'
-              />
-            </div>
+          <BrandColorsField colors={colors} onChange={setColors} />
+          <div>
+            <label className="block text-sm font-heading text-brand-400 mb-2">Brand Motto</label>
+            <input
+              type="text"
+              value={motto}
+              onChange={(e) => setMotto(e.target.value)}
+              className="w-full px-4 py-3 bg-brand-900 border border-white/10 rounded-lg text-white font-body text-sm placeholder:text-brand-700 focus:outline-none focus:border-white/30 transition-colors"
+              placeholder='e.g., "Think Different"'
+            />
           </div>
           <p className="text-brand-700 text-[11px] font-body">
             Logo, product images, and font files are uploaded in Media Library → Uploads.
@@ -296,6 +273,134 @@ function ClientModal({ client, onSave, onClose }: {
           </div>
         </form>
       </div>
+    </div>
+  )
+}
+
+/** Loose hex text ("FF5733", "#fff") → a valid 6-digit hex, or null. */
+function toHex(raw: string): string | null {
+  const s = raw.trim().replace(/^#/, '')
+  if (!/^[0-9a-fA-F]{3}$|^[0-9a-fA-F]{6}$/.test(s)) return null
+  const full = s.length === 3 ? s.split('').map((ch) => ch + ch).join('') : s
+  return `#${full.toUpperCase()}`
+}
+
+function normalizeColors(list: string[]): string[] {
+  return list.map((c) => toHex(c)).filter((c): c is string => !!c)
+}
+
+const DEFAULT_SWATCH = '#7C5CFF'
+
+/**
+ * Brand colors as real swatches: click one to open the OS color picker,
+ * type a hex if you have the exact code, paste a whole palette at once.
+ * Always saves the same `brand_guidelines.colors` string array.
+ */
+function BrandColorsField({ colors, onChange }: {
+  colors: string[]
+  /** the raw setState — every edit goes through an updater so rapid clicks
+   *  (add twice before a render lands) don't overwrite each other */
+  onChange: React.Dispatch<React.SetStateAction<string[]>>
+}) {
+  const [pasting, setPasting] = useState(false)
+  const [pasteText, setPasteText] = useState('')
+
+  const setAt = (i: number, value: string) => onChange((prev) => prev.map((c, idx) => (idx === i ? value : c)))
+  const removeAt = (i: number) => onChange((prev) => prev.filter((_, idx) => idx !== i))
+
+  const applyPaste = () => {
+    const found = pasteText.split(/[,\s;]+/).map(toHex).filter((c): c is string => !!c)
+    if (found.length) onChange((prev) => [...prev, ...found.filter((c) => !prev.includes(c))])
+    setPasteText('')
+    setPasting(false)
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <label className="block text-sm font-heading text-brand-400">Brand Colors</label>
+        <button
+          type="button"
+          onClick={() => setPasting((p) => !p)}
+          className="text-brand-600 hover:text-brand-300 text-[11px] font-heading tracking-wide transition-colors"
+        >
+          {pasting ? 'CLOSE' : 'PASTE HEX CODES'}
+        </button>
+      </div>
+
+      {pasting && (
+        <div className="flex items-center gap-2 mb-3">
+          <input
+            type="text"
+            value={pasteText}
+            onChange={(e) => setPasteText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                applyPaste()
+              }
+            }}
+            placeholder="#FF5733, #1A1A2E, 0EA5E9"
+            className="flex-1 px-3.5 py-2.5 bg-brand-900 border border-white/10 rounded-lg text-white font-body text-sm placeholder:text-brand-700 focus:outline-none focus:border-white/30 transition-colors"
+            autoFocus
+          />
+          <button
+            type="button"
+            onClick={applyPaste}
+            className="px-4 py-2.5 border border-white/15 text-white font-heading text-xs rounded-lg hover:border-white/30 transition-colors"
+          >
+            Add
+          </button>
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-start gap-2">
+        {colors.map((c, i) => (
+          <div key={i} className="w-[86px]">
+            <div className="relative group/swatch">
+              <input
+                type="color"
+                /* mid-typing the text field can hold a partial hex — the
+                   native picker needs a valid value or it snaps to black */
+                value={toHex(c) ?? DEFAULT_SWATCH}
+                onChange={(e) => setAt(i, e.target.value.toUpperCase())}
+                title="Pick a color"
+                className="w-full h-12 rounded-lg border border-white/15 bg-transparent cursor-pointer appearance-none p-0 [&::-webkit-color-swatch]:rounded-md [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-moz-color-swatch]:rounded-md [&::-moz-color-swatch]:border-0"
+              />
+              <button
+                type="button"
+                onClick={() => removeAt(i)}
+                title="Remove color"
+                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-brand-950 border border-white/20 text-brand-400 hover:text-white hover:border-white/50 text-[10px] leading-none flex items-center justify-center opacity-0 group-hover/swatch:opacity-100 transition-opacity"
+              >
+                ✕
+              </button>
+            </div>
+            <input
+              type="text"
+              value={c}
+              onChange={(e) => {
+                const next = toHex(e.target.value)
+                setAt(i, next ?? e.target.value.toUpperCase())
+              }}
+              onBlur={(e) => setAt(i, toHex(e.target.value) ?? DEFAULT_SWATCH)}
+              spellCheck={false}
+              className="w-full mt-1 px-1.5 py-1 bg-brand-900 border border-white/10 rounded text-center text-brand-300 font-body text-[11px] tracking-wide focus:outline-none focus:border-white/30 transition-colors"
+            />
+          </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={() => onChange((prev) => [...prev, DEFAULT_SWATCH])}
+          className="w-[86px] h-12 rounded-lg border border-dashed border-white/15 text-brand-500 hover:text-white hover:border-white/35 font-heading text-[11px] tracking-wide transition-colors"
+        >
+          + COLOR
+        </button>
+      </div>
+      <p className="text-brand-700 text-[11px] font-body mt-2">
+        Used across the brief and every generated creative. Click a swatch to open the color picker.
+      </p>
     </div>
   )
 }

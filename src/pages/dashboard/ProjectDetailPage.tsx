@@ -431,6 +431,9 @@ export default function ProjectDetailPage() {
         <DiscoveryEditor
           projectId={project.id}
           discovery={project.discovery_data}
+          agencyId={project.agency_id}
+          clientId={project.client_id}
+          demoMode={demoMode}
           onClose={() => setEditingDiscovery(false)}
           onSaved={reload}
         />

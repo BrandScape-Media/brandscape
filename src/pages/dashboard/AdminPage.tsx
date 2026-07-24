@@ -14,6 +14,7 @@ import {
 } from '../../lib/orchestrator'
 import { timeAgo, formatBytes } from '../../lib/format'
 import DiscoveryEditor from '../../components/dashboard/DiscoveryEditor'
+import ProductPhotos from '../../components/dashboard/ProductPhotos'
 import AdminPlayground from './AdminPlayground'
 import AdminInfluencers from './AdminInfluencers'
 import AdminMediaLab from './AdminMediaLab'
@@ -45,6 +46,9 @@ export default function AdminPage() {
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  // shared with the Deliverables stage row, which jumps straight to the
+  // uploader with the "final client-ready output" flag already on
+  const [asDeliverable, setAsDeliverable] = useState(false)
 
   useEffect(() => {
     if (!user?.platform_admin) return
@@ -230,9 +234,26 @@ export default function AdminPage() {
                 )}
               </div>
 
-              <StagesPanel detail={detail} onChanged={() => loadDetail(detail.id)} onNotice={setNotice} onError={setError} />
+              <StagesPanel
+                detail={detail}
+                onChanged={() => loadDetail(detail.id)}
+                onNotice={setNotice}
+                onError={setError}
+                onAddDeliverables={() => {
+                  setAsDeliverable(true)
+                  document.getElementById('admin-media-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }}
+              />
+              <ProductPhotosPanel projectId={detail.id} />
               <MachinePlanPanel projectId={detail.id} />
-              <MediaPanel detail={detail} onChanged={() => loadDetail(detail.id)} onNotice={setNotice} onError={setError} />
+              <MediaPanel
+                detail={detail}
+                asDeliverable={asDeliverable}
+                setAsDeliverable={setAsDeliverable}
+                onChanged={() => loadDetail(detail.id)}
+                onNotice={setNotice}
+                onError={setError}
+              />
             </>
           )}
         </div>
@@ -242,11 +263,12 @@ export default function AdminPage() {
   )
 }
 
-function StagesPanel({ detail, onChanged, onNotice, onError }: {
+function StagesPanel({ detail, onChanged, onNotice, onError, onAddDeliverables }: {
   detail: AdminProjectDetail
   onChanged: () => void
   onNotice: (m: string) => void
   onError: (m: string) => void
+  onAddDeliverables: () => void
 }) {
   const [editingStage, setEditingStage] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
@@ -311,7 +333,16 @@ function StagesPanel({ detail, onChanged, onNotice, onError }: {
                   Edit Brief
                 </button>
               ) : s.stage === 'shooting' ? (
-                <span className="text-brand-700 text-[10px] font-body">media pipeline</span>
+                <span className="text-brand-700 text-[10px] font-body">media pipeline — no text output</span>
+              ) : s.stage === 'editing' ? (
+                /* Deliverables holds finished creatives, not LLM copy — the
+                   markdown editor here only ever produced confusion. */
+                <button
+                  onClick={onAddDeliverables}
+                  className="px-3 py-1.5 border border-white/10 text-brand-300 hover:text-white hover:border-white/25 font-heading text-[11px] rounded-lg transition-all"
+                >
+                  Add Deliverables ↓
+                </button>
               ) : (
                 <button
                   onClick={() => {
@@ -489,15 +520,32 @@ function MachinePlanPanel({ projectId }: { projectId: string }) {
   )
 }
 
-function MediaPanel({ detail, onChanged, onNotice, onError }: {
+/**
+ * Product photos behind the project's client. A project created without one
+ * can't render product or influencer-holding-product shots at all, and
+ * they're stored per client — so this is the staff fix-up window.
+ */
+function ProductPhotosPanel({ projectId }: { projectId: string }) {
+  return (
+    <div className="bg-brand-900/20 border border-white/5 rounded-xl p-5">
+      <h3 className="font-heading font-semibold text-xs text-brand-300 tracking-wider mb-4">
+        PRODUCT PHOTOS <span className="text-brand-600 font-body normal-case tracking-normal">— on the client, reused by every campaign</span>
+      </h3>
+      <ProductPhotos mode="admin" projectId={projectId} compact />
+    </div>
+  )
+}
+
+function MediaPanel({ detail, asDeliverable, setAsDeliverable, onChanged, onNotice, onError }: {
   detail: AdminProjectDetail
+  /** when on, uploads are tagged as final Deliverables (client-ready), not raws */
+  asDeliverable: boolean
+  setAsDeliverable: (v: boolean) => void
   onChanged: () => void
   onNotice: (m: string) => void
   onError: (m: string) => void
 }) {
   const [uploading, setUploading] = useState(false)
-  // when on, uploads are tagged as final Deliverables (client-ready), not raws
-  const [asDeliverable, setAsDeliverable] = useState(false)
 
   const handleFiles = async (files: FileList | null) => {
     if (!files?.length) return
@@ -527,9 +575,11 @@ function MediaPanel({ detail, onChanged, onNotice, onError }: {
   }
 
   return (
-    <div className="bg-brand-900/20 border border-white/5 rounded-xl p-5">
+    <div id="admin-media-panel" className="bg-brand-900/20 border border-white/5 rounded-xl p-5 scroll-mt-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-heading font-semibold text-xs text-brand-300 tracking-wider">GENERATED MEDIA (ACT AS THE AI)</h3>
+        <h3 className="font-heading font-semibold text-xs text-brand-300 tracking-wider">
+          {asDeliverable ? 'DELIVERABLES (FINAL, CLIENT-READY)' : 'GENERATED MEDIA (ACT AS THE AI)'}
+        </h3>
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-1.5 text-[10px] font-heading text-brand-400 cursor-pointer select-none">
             <input type="checkbox" checked={asDeliverable} onChange={(e) => setAsDeliverable(e.target.checked)} className="accent-white" />

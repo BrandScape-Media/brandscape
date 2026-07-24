@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAgency, useAssets, useClientAssets, useClients } from '../../hooks/useData'
 import { useAuth } from '../../context/AuthContext'
 import { uploadClientAsset, deleteClientAsset } from '../../lib/api'
@@ -403,6 +403,7 @@ function UploadModal({ clients, onClose, onUploaded, demoMode, agencyId, remaini
 function GeneratedTab() {
   const [filter, setFilter] = useState<MediaType>('all')
   const [clientFilter, setClientFilter] = useState('all')
+  const [projectFilter, setProjectFilter] = useState('all') // 'all' | project_id — open one folder on its own
   const [search, setSearch] = useState('')
   const [viewing, setViewing] = useState<MediaAsset | null>(null)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set()) // collapsed project folders
@@ -415,14 +416,40 @@ function GeneratedTab() {
       return next
     })
 
+  /** Open one project on its own — the "go into the folder" move. */
+  const openOnly = (id: string) => {
+    setProjectFilter(id)
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
+  }
+
   const all = assets ?? []
   const clientNames = useMemo(
     () => [...new Set(all.map((a) => a.client_name).filter((n): n is string => !!n))].sort(),
     [all],
   )
+  // project list follows the client filter, so the two selects stay coherent
+  const projectOptions = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const a of all) {
+      if (clientFilter !== 'all' && a.client_name !== clientFilter) continue
+      if (!map.has(a.project_id)) map.set(a.project_id, a.project_name ?? 'Untitled project')
+    }
+    return [...map.entries()].map(([id, name]) => ({ id, name }))
+  }, [all, clientFilter])
+
+  // a project pinned under a different client would silently show nothing
+  useEffect(() => {
+    if (projectFilter !== 'all' && !projectOptions.some((p) => p.id === projectFilter)) setProjectFilter('all')
+  }, [projectOptions, projectFilter])
+
   const filtered = all.filter((a) => {
     if (filter !== 'all' && a.type !== filter) return false
     if (clientFilter !== 'all' && a.client_name !== clientFilter) return false
+    if (projectFilter !== 'all' && a.project_id !== projectFilter) return false
     const name = a.metadata?.name ?? ''
     const project = a.project_name ?? ''
     if (search && !name.toLowerCase().includes(search.toLowerCase()) && !project.toLowerCase().includes(search.toLowerCase())) return false
@@ -442,7 +469,7 @@ function GeneratedTab() {
     }
     return [...map.values()]
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, clientFilter, search, all])
+  }, [filter, clientFilter, projectFilter, search, all])
 
   const allCollapsed = groups.length > 0 && groups.every((g) => collapsed.has(g.id))
 
@@ -495,12 +522,33 @@ function GeneratedTab() {
         {clientNames.length > 1 && (
           <select
             value={clientFilter}
-            onChange={(e) => setClientFilter(e.target.value)}
+            onChange={(e) => {
+              setClientFilter(e.target.value)
+              setProjectFilter('all')
+            }}
             className="px-4 py-2.5 bg-brand-900/30 border border-white/5 rounded-xl text-white font-body text-sm focus:outline-none focus:border-white/20 transition-colors"
           >
             <option value="all">All clients</option>
             {clientNames.map((c) => (
               <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        )}
+
+        {/* Project filter — the "open just this folder" control */}
+        {projectOptions.length > 1 && (
+          <select
+            value={projectFilter}
+            onChange={(e) => setProjectFilter(e.target.value)}
+            className={`px-4 py-2.5 bg-brand-900/30 border rounded-xl font-body text-sm focus:outline-none transition-colors ${
+              projectFilter === 'all'
+                ? 'border-white/5 text-white focus:border-white/20'
+                : 'border-violet-400/40 text-violet-200 focus:border-violet-400/70'
+            }`}
+          >
+            <option value="all">All projects ({projectOptions.length})</option>
+            {projectOptions.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
         )}
@@ -519,14 +567,21 @@ function GeneratedTab() {
           />
         </div>
 
-        {groups.length > 1 && (
+        {projectFilter !== 'all' ? (
+          <button
+            onClick={() => setProjectFilter('all')}
+            className="shrink-0 px-3.5 py-2.5 rounded-xl border border-white/5 bg-brand-900/30 text-brand-400 hover:text-white hover:border-white/20 text-xs font-heading tracking-wide transition-colors"
+          >
+            ← All projects
+          </button>
+        ) : groups.length > 1 ? (
           <button
             onClick={() => setCollapsed(allCollapsed ? new Set() : new Set(groups.map((g) => g.id)))}
             className="shrink-0 px-3.5 py-2.5 rounded-xl border border-white/5 bg-brand-900/30 text-brand-400 hover:text-white hover:border-white/20 text-xs font-heading tracking-wide transition-colors"
           >
             {allCollapsed ? 'Expand all' : 'Collapse all'}
           </button>
-        )}
+        ) : null}
       </div>
 
       {/* Assets Grid */}
@@ -542,22 +597,34 @@ function GeneratedTab() {
             const isCollapsed = collapsed.has(g.id)
             return (
               <section key={g.id}>
-                {/* Folder header — click to collapse/expand this project */}
-                <button
-                  onClick={() => toggleFolder(g.id)}
-                  className="w-full flex items-center gap-2 mb-3 pb-2 border-b border-white/5 text-left group/folder"
-                >
-                  <svg className={`w-3.5 h-3.5 text-brand-500 shrink-0 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                  <svg className="w-4 h-4 text-brand-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                  </svg>
-                  <h2 className="font-heading font-bold text-sm text-white truncate group-hover/folder:text-brand-200 transition-colors">
-                    {g.clientName && <span className="text-brand-400">{g.clientName} · </span>}{g.projectName}
-                  </h2>
-                  <span className="text-brand-600 text-xs font-heading shrink-0 ml-auto">{g.assets.length}</span>
-                </button>
+                {/* Folder header — click anywhere to collapse/expand */}
+                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/5 group/folder">
+                  <button onClick={() => toggleFolder(g.id)} className="flex items-center gap-2 min-w-0 flex-1 text-left">
+                    <svg className={`w-3.5 h-3.5 text-brand-500 shrink-0 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                    <svg className="w-4 h-4 text-brand-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      {isCollapsed ? (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                      ) : (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2H3V7zm0 2h18l-1.5 8.2a2 2 0 01-2 1.8H6.5a2 2 0 01-2-1.8L3 9z" />
+                      )}
+                    </svg>
+                    <h2 className="font-heading font-bold text-sm text-white truncate group-hover/folder:text-brand-200 transition-colors">
+                      {g.clientName && <span className="text-brand-400">{g.clientName} · </span>}{g.projectName}
+                    </h2>
+                    <span className="text-brand-600 text-xs font-heading shrink-0">{g.assets.length}</span>
+                  </button>
+                  {projectFilter === 'all' && groups.length > 1 && (
+                    <button
+                      onClick={() => openOnly(g.id)}
+                      title="Show only this project"
+                      className="shrink-0 px-2.5 py-1 rounded-lg border border-white/5 text-brand-600 hover:text-white hover:border-white/25 text-[10px] font-heading tracking-wide opacity-0 group-hover/folder:opacity-100 focus:opacity-100 transition-all"
+                    >
+                      OPEN ONLY
+                    </button>
+                  )}
+                </div>
                 {!isCollapsed && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {g.assets.map((asset) => (
