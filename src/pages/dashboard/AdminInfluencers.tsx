@@ -339,28 +339,42 @@ function DetailDialog({
   onDeleted: (id: string) => void
   onError: (m: string) => void
 }) {
+  const [name, setName] = useState(influencer.name)
+  const [gender, setGender] = useState<InfluencerGender>(influencer.gender)
+  const [ageBracket, setAgeBracket] = useState<InfluencerAgeBracket>(influencer.age_bracket)
   const [voiceId, setVoiceId] = useState(influencer.voice_id ?? '')
   const [tags, setTags] = useState(influencer.tags.join(', '))
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
+  const trimmedName = name.trim()
   const dirty =
+    trimmedName !== influencer.name ||
+    gender !== influencer.gender ||
+    ageBracket !== influencer.age_bracket ||
     voiceId !== (influencer.voice_id ?? '') ||
     tags.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean).join(',') !== influencer.tags.join(',')
 
   const save = async () => {
+    if (!trimmedName) return
     setSaving(true)
     try {
       const voice = voices.find((v) => v.voice_id === voiceId)
       const nextTags = tags.split(',').map((t) => t.trim()).filter(Boolean)
       await adminUpdateInfluencer(influencer.id, {
+        name: trimmedName,
+        gender,
+        age_bracket: ageBracket,
         voice_id: voiceId,
         voice_name: voiceId ? voice?.name ?? influencer.voice_name ?? '' : '',
         tags: nextTags,
       })
       onChanged({
         ...influencer,
+        name: trimmedName,
+        gender,
+        age_bracket: ageBracket,
         voice_id: voiceId || null,
         voice_name: voiceId ? voice?.name ?? influencer.voice_name : null,
         tags: nextTags.map((t) => t.toLowerCase()),
@@ -519,6 +533,27 @@ function DetailDialog({
           )}
         </div>
 
+        {/* Identity — fixing a mistyped gender or age shouldn't mean
+            deleting the persona and re-uploading every photo */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          <Field label="Name">
+            <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="Persona name" />
+          </Field>
+          <Field label="Gender">
+            <select value={gender} onChange={(e) => setGender(e.target.value as InfluencerGender)} className={inputCls}>
+              <option value="female">female</option>
+              <option value="male">male</option>
+            </select>
+          </Field>
+          <Field label="Age bracket">
+            <select value={ageBracket} onChange={(e) => setAgeBracket(e.target.value as InfluencerAgeBracket)} className={inputCls}>
+              {AGE_BRACKETS.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </Field>
+        </div>
+
         {/* Voice + tags */}
         <div className="space-y-4">
           <Field label="Voice (picking the influencer picks this voice)">
@@ -550,7 +585,7 @@ function DetailDialog({
           )}
           <button
             onClick={save}
-            disabled={saving || !dirty}
+            disabled={saving || !dirty || !trimmedName}
             className="px-5 py-2.5 bg-white text-black font-heading font-bold text-xs rounded-lg hover:bg-brand-200 transition-colors disabled:opacity-30"
           >
             {saving ? 'Saving…' : 'Save changes'}

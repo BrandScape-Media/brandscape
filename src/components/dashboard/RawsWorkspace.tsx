@@ -219,12 +219,27 @@ function MediaGrid({ tab, assets, busy, onRegen, onView }: {
         const regenning = busy === `shot-${shotId}` || a.status === 'generating'
         return (
           <div key={a.id} className="rounded-xl border border-white/10 bg-brand-900/30 overflow-hidden group">
-            <div className="relative aspect-[3/4] bg-brand-950 flex items-center justify-center">
+            {/* Preview — clicking anywhere opens the review lightbox. Videos
+                render as a muted still (no inline controls) so a click reviews
+                the clip full size with comments instead of playing it thumbnail-size. */}
+            <div
+              className={`relative aspect-[3/4] bg-brand-950 flex items-center justify-center ${
+                a.status === 'completed' && a.url ? 'cursor-pointer' : ''
+              }`}
+              onClick={() => a.status === 'completed' && a.url && onView(a)}
+            >
               <StatusBadge status={a.status} />
               {a.status === 'completed' && a.url && (
-                tab === 'video'
-                  ? <video src={a.url} controls className="w-full h-full object-cover" />
-                  : <img src={a.thumbnail_url || a.url} alt={label} onClick={() => onView(a)} className="w-full h-full object-cover cursor-pointer" />
+                tab === 'video' ? (
+                  <>
+                    <video src={a.url} preload="metadata" muted playsInline className="w-full h-full object-cover" />
+                    <span className="absolute inset-0 flex items-center justify-center bg-brand-950/10 group-hover:bg-brand-950/35 transition-colors">
+                      <span className="w-10 h-10 rounded-full bg-brand-950/70 border border-white/25 flex items-center justify-center text-white text-xs pl-0.5">▶</span>
+                    </span>
+                  </>
+                ) : (
+                  <img src={a.thumbnail_url || a.url} alt={label} className="w-full h-full object-cover" />
+                )
               )}
               {a.status === 'failed' && <span className="text-red-400/70 text-[10px] font-body px-3 text-center">{a.metadata?.error ?? 'generation failed'}</span>}
             </div>
