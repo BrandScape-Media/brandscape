@@ -166,6 +166,21 @@ export async function getLatestStageJob(projectId: string, stage: WorkflowStage)
   return data
 }
 
+/** Latest job of a given type (e.g. the shoot or voiceover run) — seeds those
+ *  controls' status on load, since Realtime only covers post-mount changes. */
+export async function getLatestJobByType(projectId: string, type: string): Promise<Job | null> {
+  const { data, error } = await getSupabase()
+    .from('jobs')
+    .select('id, stage, type, status, error, created_at, started_at, finished_at')
+    .eq('project_id', projectId)
+    .eq('type', type)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
 /** Jobs still queued/running for a project — restores the "AI working" UI after a page reload. */
 export async function listActiveJobs(projectId: string): Promise<Job[]> {
   const { data, error } = await getSupabase()

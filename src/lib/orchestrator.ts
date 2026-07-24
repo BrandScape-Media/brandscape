@@ -73,6 +73,13 @@ export async function runShoot(projectId: string): Promise<void> {
   await orThrow(await post(`/v1/projects/${projectId}/shoot`))
 }
 
+/** Generate the voiceovers from the approved Scripts stage — each VO block
+ *  synthesized separately in the cast voice, landing in the Library. Throws
+ *  the preflight message (no cast / no voice / no scripts) on 400. */
+export async function generateVoiceovers(projectId: string): Promise<void> {
+  await orThrow(await post(`/v1/projects/${projectId}/voiceovers`))
+}
+
 // ===== Casting (agency-facing) =====
 
 /** Active influencer roster for the cast pickers (Discovery + project page). */

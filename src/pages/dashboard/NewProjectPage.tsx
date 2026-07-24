@@ -34,6 +34,9 @@ export default function NewProjectPage() {
   const [step, setStep] = useState(1)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // the presenter/avatar block is collapsed by default — most briefs let the
+  // AI cast, so it opens on demand
+  const [avatarOpen, setAvatarOpen] = useState(false)
   const [formData, setFormData] = useState({
     projectName: '',
     clientId: '',
@@ -432,14 +435,34 @@ export default function NewProjectPage() {
             />
           </div>
 
-          {/* Cast / Avatar — soft preferences + optional hard pin */}
-          <div className="border border-white/[0.07] rounded-xl p-4 space-y-4 bg-brand-900/20">
-            <div>
-              <h3 className="font-heading font-semibold text-sm text-white">Presenter (AI Avatar)</h3>
-              <p className="text-brand-600 text-xs font-body mt-0.5">
-                Who should front the videos? Leave preferences on &quot;Any&quot; and the AI casts the best fit — or pin a specific persona below.
-              </p>
-            </div>
+          {/* Cast / Avatar — soft preferences + optional hard pin, collapsed by default */}
+          <div className="border border-white/[0.07] rounded-xl bg-brand-900/20 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setAvatarOpen((o) => !o)}
+              className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-white/[0.02] transition-colors"
+            >
+              <div>
+                <h3 className="font-heading font-semibold text-sm text-white">Presenter (AI Avatar)</h3>
+                <p className="text-brand-600 text-xs font-body mt-0.5">
+                  {(() => {
+                    if (formData.pinnedInfluencerId) {
+                      const inf = influencers.find((i) => i.id === formData.pinnedInfluencerId)
+                      return `Pinned: ${inf?.name ?? 'a specific presenter'}`
+                    }
+                    const g = formData.avatarGender !== 'any' ? formData.avatarGender : null
+                    const a = formData.avatarAge !== 'any' ? formData.avatarAge : null
+                    const bits = [g, a, formData.avatarTags.trim() || null].filter(Boolean)
+                    return bits.length ? `AI casts · prefers ${bits.join(' · ')}` : 'AI casts the best fit — tap to set preferences'
+                  })()}
+                </p>
+              </div>
+              <svg className={`w-4 h-4 text-brand-500 shrink-0 transition-transform ${avatarOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {avatarOpen && (
+            <div className="p-4 pt-0 space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-heading text-brand-500 mb-1.5">Gender preference</label>
@@ -503,6 +526,8 @@ export default function NewProjectPage() {
                   ))}
                 </div>
               </div>
+            )}
+            </div>
             )}
           </div>
 

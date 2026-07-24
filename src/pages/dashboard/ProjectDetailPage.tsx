@@ -4,7 +4,7 @@ import { workflowStages } from '../../data/workflow'
 import WorkflowIcon from '../../components/WorkflowIcon'
 import { useAuth } from '../../context/AuthContext'
 import { useProject } from '../../hooks/useData'
-import { updateStage, updateProject, deleteProject, getLatestStageJob, listActiveJobs } from '../../lib/api'
+import { updateStage, updateProject, deleteProject, getLatestStageJob, getLatestJobByType, listActiveJobs } from '../../lib/api'
 import { runStage, reviseStage } from '../../lib/orchestrator'
 import Markdown from '../../components/Markdown'
 import AiWorking from '../../components/AiWorking'
@@ -14,6 +14,7 @@ import { projectProgress, stageLabel as stageLabelFor } from './ProjectsPage'
 import ShareManager from './ShareManager'
 import CastCard from '../../components/dashboard/CastCard'
 import ShootControl from '../../components/dashboard/ShootControl'
+import VoiceoverControl from '../../components/dashboard/VoiceoverControl'
 import DiscoveryEditor from '../../components/dashboard/DiscoveryEditor'
 import { ConfirmDialog } from './ClientsPage'
 import type { DiscoveryData, Job, ProjectStage, StageStatus, WorkflowStage } from '../../types'
@@ -43,6 +44,8 @@ export default function ProjectDetailPage() {
   const [activeRuns, setActiveRuns] = useState<Map<WorkflowStage, 'llm_generate' | 'llm_revise'>>(new Map())
   // the latest automated-shoot job — ShootControl mirrors its live status
   const [shootJob, setShootJob] = useState<Job | null>(null)
+  // the latest voiceover (tts) job — VoiceoverControl mirrors its live status
+  const [voiceoverJob, setVoiceoverJob] = useState<Job | null>(null)
 
   const stagesByKey = useMemo(() => {
     const map = new Map<WorkflowStage, ProjectStage>()
@@ -85,6 +88,12 @@ export default function ProjectDetailPage() {
           reload()
           return
         }
+        // voiceover generation likewise has its own control on the Scripts stage
+        if (row?.type === 'tts') {
+          setVoiceoverJob(row as Job)
+          reload()
+          return
+        }
         if (row?.stage) {
           const stage = row.stage as WorkflowStage
           setActiveRuns((prev) => {
@@ -113,7 +122,7 @@ export default function ProjectDetailPage() {
         setActiveRuns((prev) => {
           const next = new Map(prev)
           jobs.forEach((j) => {
-            if (j.type === 'shoot_run') return // ShootControl shows this one
+            if (j.type === 'shoot_run' || j.type === 'tts') return // own controls
             if (j.stage) next.set(j.stage as WorkflowStage, j.type === 'llm_revise' ? 'llm_revise' : 'llm_generate')
           })
           return next
@@ -122,11 +131,15 @@ export default function ProjectDetailPage() {
       .catch(() => undefined)
   }, [demoMode, id])
 
-  // seed the shoot status on load (Realtime only covers changes after mount)
+  // seed the shoot + voiceover status on load (Realtime only covers changes
+  // after mount)
   useEffect(() => {
     if (demoMode || !id || !isSupabaseConfigured()) return
     getLatestStageJob(id, 'shooting')
       .then((j) => { if (j?.type === 'shoot_run') setShootJob(j) })
+      .catch(() => undefined)
+    getLatestJobByType(id, 'tts')
+      .then((j) => { if (j) setVoiceoverJob(j) })
       .catch(() => undefined)
   }, [demoMode, id])
 
@@ -292,6 +305,10 @@ export default function ProjectDetailPage() {
     try {
       await updateStage(project.id, next, { status: 'in_progress', started_at: new Date().toISOString() })
       await updateProject(project.id, { current_stage: next })
+      // move the view to the stage we just advanced to (the whole point of
+      // the button) — otherwise the user stays looking at the stage they left
+      setActiveStage(currentIdx + 1)
+      setEditingText(null)
       reload()
     } catch (err) {
       setNotice(err instanceof Error ? err.message : 'Could not advance the stage.')
@@ -686,6 +703,11 @@ export default function ProjectDetailPage() {
                   <span className="text-brand-600 text-xs font-body">Requires the previous stage to complete first.</span>
                 )}
               </div>
+
+              {/* Voiceover generation — appears on the Scripts stage once approved */}
+              {currentWorkflow.stage === 'scripts' && currentStatus === 'completed' && editingText === null && !isRunning && (
+                <VoiceoverControl projectId={project.id} job={voiceoverJob} />
+              )}
             </div>
           </div>
         </div>

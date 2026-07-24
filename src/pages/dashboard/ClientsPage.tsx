@@ -243,7 +243,7 @@ function ClientModal({ client, onSave, onClose }: {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-heading text-brand-400 mb-2">Brand Colors <span className="text-brand-700">(hex, comma-separated)</span></label>
+              <label className="block text-sm font-heading text-brand-400 mb-2">Brand Colors</label>
               <input
                 type="text"
                 value={colors}
