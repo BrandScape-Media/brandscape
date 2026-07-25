@@ -81,7 +81,14 @@
       "Bash(node --check src/lib/shootRunner.js)",
       "Bash(curl -s -m 20 \"https://search.noemaai.com/search?q=retinol+serum+trends+2026&format=json\")",
       "Bash(curl -s -o /dev/null -w \"searxng status: %{http_code} in %{time_total}s\\\\n\" -m 20 \"https://search.noemaai.com/search?q=test&format=json\")",
-      "Bash(node -e \"const m=await import\\('./src/lib/prompts.js'\\); for\\(const s of ['research','ideation','scripts','shootplan']\\){const p=await m.systemPromptFor\\(s\\); if\\(!p\\) throw new Error\\(s\\); } console.log\\('prompts load OK'\\); const sc=await m.systemPromptFor\\('scripts'\\); console.log\\('scripts still has Background table:', /\\\\*\\\\*Background\\\\*\\\\*\\\\n\\\\n\\\\| Primary setting/.test\\(sc\\)\\); console.log\\('scripts has Type:', /Talking head \\\\\\(face to camera\\\\\\)/.test\\(sc\\)\\);\" --input-type=module)"
+      "Bash(node -e \"const m=await import\\('./src/lib/prompts.js'\\); for\\(const s of ['research','ideation','scripts','shootplan']\\){const p=await m.systemPromptFor\\(s\\); if\\(!p\\) throw new Error\\(s\\); } console.log\\('prompts load OK'\\); const sc=await m.systemPromptFor\\('scripts'\\); console.log\\('scripts still has Background table:', /\\\\*\\\\*Background\\\\*\\\\*\\\\n\\\\n\\\\| Primary setting/.test\\(sc\\)\\); console.log\\('scripts has Type:', /Talking head \\\\\\(face to camera\\\\\\)/.test\\(sc\\)\\);\" --input-type=module)",
+      "mcp__ac10949e-83ba-4aa5-a489-36aea7ff444e__stripe_api_read",
+      "Bash(curl -s https://api.brandscape.media/health)",
+      "mcp__ac10949e-83ba-4aa5-a489-36aea7ff444e__get_stripe_account_info",
+      "mcp__ac10949e-83ba-4aa5-a489-36aea7ff444e__stripe_api_search",
+      "Bash(curl -s -o /dev/null -w \"no-sig: %{http_code}\\\\n\" -X POST https://api.brandscape.media/v1/billing/webhook -H \"Content-Type: application/json\" -d '{\"id\":\"evt_test\",\"type\":\"ping\"}')",
+      "Bash(curl -s -X POST https://api.brandscape.media/v1/billing/webhook -H \"Content-Type: application/json\" -H \"Stripe-Signature: t=1,v1=deadbeef\" -d '{\"id\":\"evt_test\",\"type\":\"ping\"}' -w \"\\\\nbad-sig: %{http_code}\\\\n\")",
+      "Bash(curl -s https://api.brandscape.media/v1/billing/offers/public)"
     ]
   }
 }

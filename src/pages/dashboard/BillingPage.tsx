@@ -77,7 +77,12 @@ export default function BillingPage() {
   const [notice, setNotice] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [yearly, setYearly] = useState(false)
+  const [awaitingGrant, setAwaitingGrant] = useState(false)
   const resumed = useRef(false)
+  // Held in a ref so the polling effect can use it without restarting the
+  // interval every time the agency query settles.
+  const agencyId = useRef<string | null>(null)
+  agencyId.current = agency?.id ?? null
 
   const packsRef = useRef<HTMLDivElement>(null)
   const plansRef = useRef<HTMLDivElement>(null)
@@ -97,25 +102,37 @@ export default function BillingPage() {
 
   // Returning from Stripe. The webhook is what actually grants, and it may
   // land a moment after the redirect, so refetch rather than trusting the URL.
+  //
+  // Read the param exactly once, on mount. This effect strips it from the URL,
+  // so anything that re-runs it (agency loading in) would find nothing and
+  // cancel the pending refetch — which is precisely how a paid purchase showed
+  // a stale balance until a hard reload.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const outcome = params.get('checkout')
+    const outcome = new URLSearchParams(window.location.search).get('checkout')
     if (!outcome) return
+    window.history.replaceState({}, '', window.location.pathname)
     setNotice(
       outcome === 'success'
         ? 'Payment received — your account updates the moment Stripe confirms it (usually a second or two).'
         : 'Checkout cancelled. Nothing was charged.',
     )
-    window.history.replaceState({}, '', window.location.pathname)
-    if (outcome === 'success' && !demoMode) {
-      const again = setTimeout(() => {
-        getUsage().then(setUsage).catch(() => {})
-        getBillingConfig().then(setBilling).catch(() => {})
-        if (agency?.id) getCreditLedger(agency.id).then(setLedger).catch(() => {})
-      }, 2500)
-      return () => clearTimeout(again)
-    }
-  }, [demoMode, agency?.id])
+    if (outcome === 'success') setAwaitingGrant(true)
+  }, [])
+
+  // Poll until the grant lands. Stripe's delivery is fast but not instant, and
+  // a single delayed refetch loses the race whenever it isn't.
+  useEffect(() => {
+    if (!awaitingGrant || demoMode) return
+    let tries = 0
+    const timer = setInterval(() => {
+      tries += 1
+      void getUsage().then(setUsage).catch(() => {})
+      void getBillingConfig().then(setBilling).catch(() => {})
+      if (agencyId.current) void getCreditLedger(agencyId.current).then(setLedger).catch(() => {})
+      if (tries >= 5) setAwaitingGrant(false)
+    }, 2000)
+    return () => clearInterval(timer)
+  }, [awaitingGrant, demoMode])
 
   const buyPlan = useCallback(
     async (tier: PlanTier, interval: 'month' | 'year') => {
