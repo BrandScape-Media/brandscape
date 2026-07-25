@@ -224,16 +224,38 @@ than `purchase`.
 
 ### The trial
 
-**7 days, card required, run entirely by Stripe.** Checkout passes
-`trial_period_days: 7` (from `TRIAL_DAYS` in the server's plans.js) plus
+**7 days, card required, Starter only, run entirely by Stripe.** Checkout
+passes `trial_period_days: 7` (from `TRIAL_DAYS`) plus
 `trial_settings.end_behavior.missing_payment_method: 'cancel'`. The webhook
 already treats `trialing` as entitled, so the tier is granted immediately and
-the first charge lands on day seven.
+the first charge lands on day seven. `/health` reports `trial_tiers` and
+`trial_days`, so the policy is checkable against production.
+
+**Starter only, because a trial hands over a full month's allowance before
+any charge.** Cancelling on day six costs us 600 credits (~$24 of render) on
+Starter, 3,000 (~$120) on Professional, 12,000 (~$480) on Enterprise.
+`TRIAL_TIERS` in the server's plans.js is the switch; add a tier there and
+you are agreeing to give that allowance away.
 
 **One trial per agency.** Stripe does not dedupe this — without a guard,
 cancel-and-resubscribe grants another free week indefinitely. `agencies.
 has_trialed` is set the moment a `trialing` subscription arrives, and
 checkout only offers a trial while it is false.
+
+**Three gates, because there are three ways in:**
+
+1. Checkout will not attach a trial to a tier outside `TRIAL_TIERS`.
+2. Checkout refuses outright when a live subscription already exists — it can
+   only ever *mint* a subscription, never switch one, so a second call bills
+   the agency twice. Existing subscribers change plan through the Customer
+   Portal, where Stripe prorates properly. The route returns
+   `code: 'already_subscribed'` and the frontend redirects to Billing.
+3. The webhook ends any trial it finds on an ineligible tier
+   (`trial_end: 'now'`). **A price change inside the Portal keeps the original
+   trial end date**, so without this a Starter trial could be upgraded to
+   Enterprise and stay free until day seven. Running the check on every
+   subscription event covers the Portal, the API and the Stripe dashboard
+   alike.
 
 When a trial or subscription ends unpaid, the agency drops to **`free`**, not
 `starter`. That distinction is the whole point: dropping to `starter` was the
