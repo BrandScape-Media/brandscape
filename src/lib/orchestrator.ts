@@ -1,5 +1,5 @@
 import { getSupabase } from './supabase/client'
-import type { CreditPack, UsageSnapshot, WorkflowStage } from '../types'
+import type { CreditPack, PlanTier, Promotion, UsageSnapshot, WorkflowStage } from '../types'
 
 // Base URL of the orchestrator (Railway). Overridable per-deploy; falls
 // back to the production API domain. Guard against empty/whitespace env
@@ -303,8 +303,13 @@ export interface BillingConfig {
   configured: boolean
   live_mode?: boolean
   has_customer?: boolean
+  plan?: PlanTier
   subscription_status?: string | null
   subscription_period_end?: string | null
+  /** a trial is offered once per agency — false means "Start free trial" */
+  has_trialed?: boolean
+  trial_ends_at?: string | null
+  trial_days?: number
   packs: { id: string; credits: number; priceUsd: number }[]
   tiers: { tier: string; interval: 'month' | 'year'; priceUsd: number }[]
 }
@@ -333,12 +338,45 @@ export async function adminProvisionBilling(): Promise<{ live_mode: boolean; pri
   return res.json()
 }
 
+// ===== Offers =====
+
+/** Offers for the signed-in agency. The server resolves audience, not us. */
+export async function getOffers(): Promise<Promotion[]> {
+  const res = await orThrow(await get('/v1/billing/offers'))
+  return (await res.json()).offers ?? []
+}
+
+/**
+ * Pricing-page offers for logged-out visitors — deliberately unauthenticated,
+ * so it can't go through `get()` (which throws without a session).
+ */
+export async function getPublicOffers(): Promise<Promotion[]> {
+  const res = await fetch(`${API_URL}/v1/billing/offers/public`)
+  if (!res.ok) return []
+  return (await res.json()).offers ?? []
+}
+
+export async function adminListPromotions(): Promise<Promotion[]> {
+  const res = await orThrow(await get('/v1/admin/promotions'))
+  return (await res.json()).promotions ?? []
+}
+
+/** Create or update, keyed on the unique slug. */
+export async function adminSavePromotion(promotion: Partial<Promotion>): Promise<Promotion> {
+  const res = await orThrow(await post('/v1/admin/promotions', promotion))
+  return (await res.json()).promotion
+}
+
+export async function adminDeletePromotion(id: string): Promise<void> {
+  await orThrow(await post(`/v1/admin/promotions/${id}/delete`))
+}
+
 // ===== Billing controls (staff) =====
 
 export interface AdminAgency {
   id: string
   name: string
-  plan: 'starter' | 'professional' | 'enterprise'
+  plan: PlanTier
   usage_generations: number
   usage_revisions: number
   usage_regenerations: number

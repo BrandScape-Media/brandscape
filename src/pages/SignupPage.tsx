@@ -1,8 +1,11 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { isSupabaseConfigured } from '../lib/supabase/client'
+import { saveCheckoutIntent } from '../lib/checkoutIntent'
+import { plans } from '../data/plans'
 import MetalLogo from '../components/MetalLogo'
+import type { PlanTier } from '../types'
 
 export default function SignupPage() {
   const [name, setName] = useState('')
@@ -13,7 +16,24 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
   const { signUpWithEmail, signInWithGoogle, signInAsDemo } = useAuth()
   const navigate = useNavigate()
+  const [params] = useSearchParams()
   const configured = isSupabaseConfigured()
+
+  // A plan picked on the pricing page arrives as ?plan=…&interval=…. Park it
+  // immediately: Google OAuth leaves the site entirely, so anything held only
+  // in component state would be gone by the time they come back.
+  const chosen = plans.find((p) => p.tier === params.get('plan'))
+  useEffect(() => {
+    if (!chosen) return
+    saveCheckoutIntent({
+      tier: chosen.tier as PlanTier,
+      interval: params.get('interval') === 'year' ? 'year' : 'month',
+    })
+  }, [chosen, params])
+
+  // Billing picks the intent back up once the agency exists (onboarding runs
+  // first for a brand-new account, which is why we can't just open Checkout).
+  const landing = chosen ? '/dashboard/billing' : '/dashboard'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -21,7 +41,7 @@ export default function SignupPage() {
     setLoading(true)
     try {
       await signUpWithEmail(email, password, name)
-      navigate('/dashboard')
+      navigate(landing)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Sign up failed')
     } finally {
@@ -65,10 +85,10 @@ export default function SignupPage() {
           </p>
           <div className="mt-16 space-y-5">
             {[
-              '14-day free trial, no credit card',
-              'Full access to all 8 pipeline stages',
-              '50 AI generations included',
-              'Cancel anytime, no questions',
+              '7-day trial on any plan',
+              'Full access to all 7 pipeline stages',
+              'Nothing charged until day seven',
+              'Cancel anytime, in two clicks',
             ].map((feature) => (
               <div key={feature} className="flex items-center gap-3">
                 <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
@@ -96,7 +116,9 @@ export default function SignupPage() {
           <div className="mb-8">
             <h1 className="font-heading font-bold text-2xl text-white">Create your account</h1>
             <p className="text-brand-500 text-sm font-body mt-2">
-              14-day free trial. No credit card required.
+              {chosen
+                ? `${chosen.name} — 7-day trial. We'll take you to checkout once your agency is set up.`
+                : '7-day trial on any plan. Nothing is charged until day seven.'}
             </p>
           </div>
 

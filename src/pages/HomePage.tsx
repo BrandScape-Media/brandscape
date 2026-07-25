@@ -92,7 +92,7 @@ export default function HomePage() {
                 to="/signup"
                 className="group w-full sm:w-auto px-8 py-4 bg-white text-black font-heading font-bold text-sm tracking-wide rounded-lg hover:bg-brand-200 transition-all duration-300 hover:shadow-[0_0_60px_rgba(167,139,250,0.35)] flex items-center justify-center gap-2"
               >
-                Start Free Trial
+                Start 7-Day Trial
                 <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
@@ -586,7 +586,7 @@ export default function HomePage() {
           </h2>
           <p className="font-body text-brand-400 text-lg mb-12">
             Join the agencies already shipping content 10x faster with Brandscape.
-            Start your 14-day free trial — no credit card required.
+            Start your 7-day trial — nothing charged until day seven.
           </p>
 
           {!submitted ? (
@@ -610,7 +610,7 @@ export default function HomePage() {
                 type="submit"
                 className="px-8 py-4 bg-white text-black font-heading font-bold text-sm tracking-wide rounded-lg hover:bg-brand-200 transition-colors whitespace-nowrap"
               >
-                START FREE TRIAL
+                START 7-DAY TRIAL
               </button>
             </form>
           ) : (
@@ -623,7 +623,7 @@ export default function HomePage() {
           )}
 
           <p className="text-brand-700 text-xs font-body mt-6">
-            Free 14-day trial • No credit card required • Cancel anytime
+            7-day trial • Cancel before day seven and pay nothing • Cancel anytime after
           </p>
           <p className="text-brand-600 text-xs font-body mt-3">
             Prefer talking to a human?{' '}
@@ -783,7 +783,7 @@ function FooterSection() {
               <li><Link to="/#features" className="text-brand-600 hover:text-brand-300 text-xs font-body transition-colors">Features</Link></li>
               <li><Link to="/#workflow" className="text-brand-600 hover:text-brand-300 text-xs font-body transition-colors">Workflow</Link></li>
               <li><Link to="/pricing" className="text-brand-600 hover:text-brand-300 text-xs font-body transition-colors">Pricing</Link></li>
-              <li><Link to="/signup" className="text-brand-600 hover:text-brand-300 text-xs font-body transition-colors">Free Trial</Link></li>
+              <li><Link to="/signup" className="text-brand-600 hover:text-brand-300 text-xs font-body transition-colors">Start a trial</Link></li>
             </ul>
           </div>
 

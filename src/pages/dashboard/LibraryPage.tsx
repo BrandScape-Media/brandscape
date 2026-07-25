@@ -3,7 +3,7 @@ import { useAgency, useAssets, useClientAssets, useClients } from '../../hooks/u
 import { useAuth } from '../../context/AuthContext'
 import { uploadClientAsset, deleteClientAsset } from '../../lib/api'
 import { timeAgo, formatBytes } from '../../lib/format'
-import { plans } from '../../data/plans'
+import { planFor } from '../../data/plans'
 import { ConfirmDialog } from './ClientsPage'
 import MediaViewer from '../../components/dashboard/MediaViewer'
 import type { ClientAsset, ClientAssetKind, MediaAsset } from '../../types'
@@ -63,7 +63,7 @@ function UploadsTab() {
   const [deleting, setDeleting] = useState<ClientAsset | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
-  const plan = plans.find((p) => p.tier === agency?.plan) ?? plans[0]
+  const plan = planFor(agency?.plan)
   const limitBytes = plan.storageGb * 1_000_000_000
   const usedBytes = useMemo(() => (assets ?? []).reduce((sum, a) => sum + (a.file_size ?? 0), 0), [assets])
   const usedPct = Math.min(100, Math.round((usedBytes / limitBytes) * 100))

@@ -5,6 +5,7 @@ import type {
   Client,
   ClientAsset,
   ClientAssetKind,
+  CreditLedgerEntry,
   DiscoveryData,
   Job,
   MediaAsset,
@@ -32,6 +33,22 @@ export async function getAgency(agencyId: string): Promise<Agency | null> {
   const { data, error } = await getSupabase().from('agencies').select('*').eq('id', agencyId).maybeSingle()
   if (error) throw error
   return data
+}
+
+/**
+ * This agency's credit movements, newest first. Read straight through RLS
+ * (`credit_ledger_select_own`, migration 017) — it's the agency's own data,
+ * so there's no reason to route it via the orchestrator.
+ */
+export async function getCreditLedger(agencyId: string, limit = 100): Promise<CreditLedgerEntry[]> {
+  const { data, error } = await getSupabase()
+    .from('credit_ledger')
+    .select('id, project_id, delta, kind, reason, allowance_after, balance_after, created_at')
+    .eq('agency_id', agencyId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (error) throw error
+  return data ?? []
 }
 
 /** Calls the security-definer RPC that creates the agency and promotes the caller to owner. */

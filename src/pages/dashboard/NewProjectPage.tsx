@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useAgency, useClients, useProjects } from '../../hooks/useData'
 import { createProject, uploadClientAsset } from '../../lib/api'
 import { listInfluencersForAgency, type AgencyInfluencer } from '../../lib/orchestrator'
-import { plans } from '../../data/plans'
+import { planFor } from '../../data/plans'
 import type { AvatarPrefs } from '../../types'
 
 const OBJECTIVES = [
@@ -28,7 +28,7 @@ export default function NewProjectPage() {
   const { data: clients, loading: clientsLoading } = useClients()
   const { data: projects } = useProjects()
   const { data: agency } = useAgency()
-  const plan = plans.find((p) => p.tier === agency?.plan) ?? plans[0]
+  const plan = planFor(agency?.plan)
   const activeCount = (projects ?? []).filter((p) => !p.archived).length
   const atProjectLimit = !demoMode && activeCount >= plan.projectsIncluded
   const [step, setStep] = useState(1)

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useAgency } from '../../hooks/useData'
-import { plans } from '../../data/plans'
+import { planFor } from '../../data/plans'
 import MediaViewer from './MediaViewer'
 import { listProjectAssets } from '../../lib/api'
 import { generateRaws, regenerateShot, regenerateVo, type RawsPhase } from '../../lib/orchestrator'
@@ -55,7 +55,7 @@ export default function RawsWorkspace({
   // unlimited (enterprise) and in demo mode.
   const regenLeft = useMemo(() => {
     if (demoMode || !agency) return null
-    const limit = plans.find((p) => p.tier === agency.plan)?.regenerationsPerMonth
+    const limit = planFor(agency.plan).regenerationsPerMonth
     if (limit == null || limit >= 900_000) return null
     return { left: Math.max(0, limit - (agency.usage_regenerations ?? 0)), limit }
   }, [demoMode, agency])

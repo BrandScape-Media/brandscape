@@ -15,6 +15,7 @@ import NewProjectPage from './pages/dashboard/NewProjectPage'
 import ProjectDetailPage from './pages/dashboard/ProjectDetailPage'
 import ClientsPage from './pages/dashboard/ClientsPage'
 import LibraryPage from './pages/dashboard/LibraryPage'
+import BillingPage from './pages/dashboard/BillingPage'
 import SettingsPage from './pages/dashboard/SettingsPage'
 import AdminPage from './pages/dashboard/AdminPage'
 
@@ -91,6 +92,7 @@ function AppRouter() {
             <Route path="projects/:id" element={<ProjectDetailPage />} />
             <Route path="clients" element={<ClientsPage />} />
             <Route path="library" element={<LibraryPage />} />
+            <Route path="billing" element={<BillingPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="admin" element={<AdminPage />} />
           </Route>

@@ -3,9 +3,8 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useAgency } from '../../hooks/useData'
 import { updateAgency, updateProfileName } from '../../lib/api'
-import { plans } from '../../data/plans'
+import { planFor } from '../../data/plans'
 import { formatDate } from '../../lib/format'
-import UsagePanel from '../../components/dashboard/UsagePanel'
 
 export default function SettingsPage() {
   const { user, demoMode, refreshProfile } = useAuth()
@@ -26,7 +25,7 @@ export default function SettingsPage() {
   }, [agency])
 
   const canEditAgency = user?.role === 'owner' || user?.role === 'admin'
-  const plan = plans.find((p) => p.tier === agency?.plan) ?? plans[0]
+  const plan = planFor(agency?.plan)
 
   const notify = (kind: 'ok' | 'err', text: string) => {
     setMessage({ kind, text })
@@ -176,35 +175,29 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* Plan */}
+      {/* Plan — summary only; Billing owns the detail so nothing is duplicated */}
       <div className="bg-brand-900/30 border border-white/5 rounded-xl p-6 mb-6">
         <h2 className="font-heading font-bold text-lg mb-6">Subscription</h2>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="font-heading font-bold">{plan.name} Plan</p>
+            <p className="font-heading font-bold">
+              {plan.name}
+              {plan.tier !== 'free' && ' Plan'}
+            </p>
             <p className="text-brand-500 text-sm font-body">
-              ${plan.priceMonthly}/month
+              {plan.tier === 'free' ? 'No active subscription' : `$${plan.priceMonthly}/month`}
               {agency?.trial_ends_at && new Date(agency.trial_ends_at) > new Date() && (
                 <span className="text-amber-400"> • Trial ends {formatDate(agency.trial_ends_at)}</span>
               )}
             </p>
           </div>
           <Link
-            to="/pricing"
-            className="px-4 py-2 border border-white/20 text-white font-heading text-sm rounded-lg hover:border-white/40 transition-colors"
+            to="/dashboard/billing"
+            className="px-4 py-2 bg-white text-black font-heading font-bold text-sm rounded-lg hover:bg-brand-200 transition-colors"
           >
-            Change Plan
+            Billing &amp; usage
           </Link>
         </div>
-        <p className="text-brand-700 text-xs font-body pt-4 border-t border-white/5">
-          Online billing (Stripe) is coming soon — plan changes and credit top-ups are handled manually until then.
-        </p>
-      </div>
-
-      {/* Usage — every meter, what's left, and how to get more */}
-      <div className="mb-6">
-        <h2 className="font-heading font-bold text-lg mb-4">Usage</h2>
-        <UsagePanel />
       </div>
 
       {/* Danger Zone */}

@@ -60,6 +60,7 @@ export default function DashboardLayout() {
     { to: '/dashboard/projects', label: 'Projects', icon: 'folder' },
     { to: '/dashboard/clients', label: 'Clients', icon: 'users' },
     { to: '/dashboard/library', label: 'Media Library', icon: 'library' },
+    { to: '/dashboard/billing', label: 'Billing', icon: 'billing' },
     { to: '/dashboard/settings', label: 'Settings', icon: 'settings' },
     // Brandscape staff only: cross-agency QC
     ...(user?.platform_admin ? [{ to: '/dashboard/admin', label: 'Admin', icon: 'shield' }] : []),
@@ -193,6 +194,11 @@ function SidebarIcon({ name }: { name: string }) {
     library: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    ),
+    billing: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M5 6h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z" />
       </svg>
     ),
     settings: (

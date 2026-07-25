@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useAgency, useAssets, useProjects } from '../../hooks/useData'
 import { projectProgress, stageLabel } from './ProjectsPage'
-import { plans } from '../../data/plans'
+import { planFor } from '../../data/plans'
 import { timeAgo, formatBytes } from '../../lib/format'
 import type { Project } from '../../types'
 
@@ -35,7 +35,7 @@ export default function OverviewPage() {
   const { data: agency } = useAgency()
   const { data: assets } = useAssets()
 
-  const plan = plans.find((p) => p.tier === agency?.plan) ?? plans[0]
+  const plan = planFor(agency?.plan)
   const projectCount = projects?.length ?? 0
   const assetCount = assets?.length ?? 0
   const recentProjects = (projects ?? []).slice(0, 3)

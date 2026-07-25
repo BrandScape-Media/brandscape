@@ -18,7 +18,7 @@ import { timeAgo } from '../../lib/format'
  * ledger instead of being an undocumented SQL edit.
  */
 
-const TIERS = ['starter', 'professional', 'enterprise'] as const
+const TIERS = ['free', 'starter', 'professional', 'enterprise'] as const
 
 const UNLIMITED = 999_999
 const fmt = (n: number) => (n >= UNLIMITED ? '∞' : n.toLocaleString())

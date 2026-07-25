@@ -17,6 +17,10 @@ export interface Agency {
   industry?: string | null
   plan: PlanTier
   trial_ends_at?: string | null
+  /** a trial is offered once per agency; set when the first one begins */
+  has_trialed?: boolean
+  subscription_status?: string | null
+  subscription_period_end?: string | null
   usage_generations: number
   usage_revisions: number
   usage_regenerations: number
@@ -60,8 +64,25 @@ export interface CreditPack {
   priceUsd: number
 }
 
+/** One movement in the credit ledger. Negative delta = spent. */
+export interface CreditLedgerEntry {
+  id: string
+  project_id: string | null
+  delta: number
+  kind: string
+  reason: string | null
+  allowance_after: number | null
+  balance_after: number | null
+  created_at: string
+}
+
 // ===== Plans =====
-export type PlanTier = 'starter' | 'professional' | 'enterprise'
+/**
+ * `free` is a state you land in, not a product you buy — before the trial
+ * starts and after a subscription lapses. It has no Stripe price, so it is
+ * deliberately absent from the `plans` array the pricing page renders.
+ */
+export type PlanTier = 'free' | 'starter' | 'professional' | 'enterprise'
 
 export interface PlanFeature {
   label: string
@@ -88,6 +109,34 @@ export interface Plan {
   prioritySupport: boolean
   customWorkflows: boolean
   isRecommended?: boolean
+}
+
+// ===== Offers =====
+
+/**
+ * A marketing offer. Stripe owns the discount maths (coupons + promotion
+ * codes); this row owns what is shown, to whom, and when. `discount_label`
+ * is display copy only — the real reduction is whatever the code says.
+ */
+export interface Promotion {
+  id: string
+  slug: string
+  headline: string
+  body?: string | null
+  cta_label?: string | null
+  cta_target: 'upgrade' | 'credits' | 'url'
+  cta_url?: string | null
+  audience: 'all' | 'trialing' | 'free' | 'starter' | 'professional' | 'low_credits' | 'out_of_credits'
+  placement: 'dashboard' | 'pricing' | 'both'
+  stripe_promotion_code?: string | null
+  discount_label?: string | null
+  /** null = live now */
+  starts_at?: string | null
+  /** null = permanent */
+  ends_at?: string | null
+  active: boolean
+  dismissible: boolean
+  priority: number
 }
 
 // ===== Clients =====

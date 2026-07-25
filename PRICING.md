@@ -34,9 +34,9 @@ After editing: commit + push → Railway redeploys automatically.
 
 ### 3. Database — what's stored where
 
-- `agencies.plan` — which tier an agency is on (`starter` / `professional` /
-  `enterprise`). Until Stripe exists, change it manually in Supabase:
-  `update agencies set plan = 'professional' where id = '<agency uuid>';`
+- `agencies.plan` — which tier an agency is on (`free` / `starter` /
+  `professional` / `enterprise`), set by the Stripe webhook. Staff can
+  override it in Mission Control → Plans & Credits.
 - `agencies.usage_generations` / `usage_revisions` — this month's counters,
   incremented atomically by the `consume_usage()` function (migration 007),
   which also **resets them automatically when a new calendar month starts**
@@ -76,9 +76,28 @@ One credit ≈ **$0.04** of render cost. A full six-script project shoot
 
 | Tier | Credits | ≈ full shoots | Deliverable projects |
 |---|---|---|---|
+| Free ($0) | 0 | 0 | 0 of 1 |
 | Starter ($299) | 600 | 4 | 1 of 3 |
 | Professional ($799) | 3,000 | 20 | all 15 |
 | Enterprise ($1,999) | 12,000 | 80 | unlimited |
+
+### The `free` tier
+
+`free` is a **state you land in, not a product you buy** — before the trial
+starts, and after a subscription lapses or is cancelled. It has no Stripe
+price, which is why provisioning iterates `SELLABLE_TIERS` rather than
+`PLAN_LIMITS` (iterating the latter would try to create a product with no
+amount).
+
+It is **read-only, never destructive**: existing projects, media and
+deliverables stay visible and downloadable; only new paid work is blocked.
+Zero limits do the blocking on their own — `consume_usage` refuses when
+`used >= limit`, and `0 >= 0` is always true.
+
+Before migration 020 the column defaulted to `starter` and nothing expired,
+so every signup received the full $299 plan free, forever. **Changing the
+default only affects new rows** — agencies created before then keep the tier
+they have. Move real free-riders by hand in Mission Control.
 
 ### Top-up packs (overage)
 
@@ -113,7 +132,13 @@ credits are never burned while the plan still has room.
 (`enforce_deliverable_limit`), because projects advance stage straight from
 the browser under RLS — there's no orchestrator route to hook. That means the
 number also lives in `deliverable_project_limit()` in SQL. Three places:
-plans.ts, plans.js, and that SQL function. Change all three together.
+plans.ts, plans.js, and that SQL function. Change all three together — and
+that includes adding any **new tier** to all three.
+
+On the frontend, resolve a tier with `planFor(tier)` from `src/data/plans.ts`.
+The old idiom `plans.find(p => p.tier === agency.plan) ?? plans[0]` silently
+hands a `free` agency Starter's client-side allowances, which the server then
+refuses — confusing for the user and invisible in testing.
 
 ### Staff controls
 
@@ -170,6 +195,72 @@ credits twice. If a handler throws, the marker is deleted so the retry works.
 Mission Control grants still work for comped credits or payments taken
 outside Stripe. They're recorded in the same ledger with kind `grant` rather
 than `purchase`.
+
+### The trial
+
+**7 days, card required, run entirely by Stripe.** Checkout passes
+`trial_period_days: 7` (from `TRIAL_DAYS` in the server's plans.js) plus
+`trial_settings.end_behavior.missing_payment_method: 'cancel'`. The webhook
+already treats `trialing` as entitled, so the tier is granted immediately and
+the first charge lands on day seven.
+
+**One trial per agency.** Stripe does not dedupe this — without a guard,
+cancel-and-resubscribe grants another free week indefinitely. `agencies.
+has_trialed` is set the moment a `trialing` subscription arrives, and
+checkout only offers a trial while it is false.
+
+When a trial or subscription ends unpaid, the agency drops to **`free`**, not
+`starter`. That distinction is the whole point: dropping to `starter` was the
+free-forever hole.
+
+## Offers
+
+Stripe owns the discount **maths** (coupons + promotion codes). The
+`promotions` table owns **what is shown, to whom, and when** — so the label
+and the money can't be edited into disagreeing. Checkout sets
+`allow_promotion_codes: true` so a displayed code is actually redeemable.
+
+| Column | Purpose |
+|---|---|
+| `audience` | `all`, `trialing`, `free`, `starter`, `professional`, `low_credits`, `out_of_credits` |
+| `placement` | `dashboard`, `pricing`, `both` |
+| `stripe_promotion_code` | the code customers type at checkout |
+| `discount_label` | display copy only |
+| `starts_at` / `ends_at` | null = live now / permanent |
+
+Audience is resolved **server-side** (`GET /v1/billing/offers`) from the
+caller's plan, subscription status and credit position — the table is
+service-role only, so an offer aimed at lapsed accounts can't be enumerated
+by everyone else. The pricing page uses a separate unauthenticated route
+(`/v1/billing/offers/public`) that can only ever return `audience: 'all'`.
+
+Manage them in Mission Control → **Offers**. Dismissals live in
+`localStorage`, keyed by promotion id.
+
+The **permanent** offer is annual billing (19% off), built into the pricing
+page rather than stored as a row. Trial reminders are *system* state computed
+from `subscription_period_end`, deliberately separate from marketing offers.
+
+## Where the tiers sit in the market (checked 2026-07-25)
+
+| Product | Entry | Top public tier |
+|---|---|---|
+| Pencil | $14/mo | $55/mo, then custom |
+| Creatify | $39/mo | ~$49/mo |
+| AdCreative.ai | $39/mo | $599/mo |
+| HeyGen | ~$29/mo | ~$220/mo |
+| Arcads | ~$110/mo | $500+/mo (~$11/video) |
+| **Brandscape** | **$299/mo** | **$1,999/mo** |
+
+Brandscape is the most expensive entry point in the category. That is
+defensible **only because the page sells the pipeline** — those products are
+point tools that render a clip from a script you supply, whereas this runs
+the seven stages around it. The pricing page therefore leads with the stages,
+not a feature list.
+
+Watch the entry price after launch. If trial starts are weak, the fix is a
+cheaper rung *below* Starter, not discounting Starter — discounting the
+anchor tier teaches the market the price isn't real.
 
 ## Recipe: changing a tier after market research
 
