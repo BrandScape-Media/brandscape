@@ -1,5 +1,5 @@
 import { getSupabase } from './supabase/client'
-import type { WorkflowStage } from '../types'
+import type { CreditPack, UsageSnapshot, WorkflowStage } from '../types'
 
 // Base URL of the orchestrator (Railway). Overridable per-deploy; falls
 // back to the production API domain. Guard against empty/whitespace env
@@ -287,6 +287,72 @@ export async function adminUploadMedia(
 
 export async function adminDeleteMedia(assetId: string): Promise<void> {
   await orThrow(await post(`/v1/admin/media/${assetId}/delete`))
+}
+
+// ===== Usage & credits =====
+
+/** Live usage for the signed-in agency, with server-side limits attached. */
+export async function getUsage(): Promise<UsageSnapshot> {
+  const res = await orThrow(await get('/v1/usage'))
+  return res.json()
+}
+
+// ===== Billing controls (staff) =====
+
+export interface AdminAgency {
+  id: string
+  name: string
+  plan: 'starter' | 'professional' | 'enterprise'
+  usage_generations: number
+  usage_revisions: number
+  usage_regenerations: number
+  usage_credits: number
+  credit_balance: number
+  billing_cycle_start: string | null
+  created_at: string
+  limits: {
+    generationsPerMonth: number
+    revisionsPerMonth: number
+    regenerationsPerMonth: number
+    creditsPerMonth: number
+    projects: number
+    deliverableProjects: number
+    storageGb: number
+  }
+}
+
+export async function adminListAgencies(): Promise<{ agencies: AdminAgency[]; packs: CreditPack[] }> {
+  const res = await orThrow(await get('/v1/admin/agencies'))
+  return res.json()
+}
+
+export async function adminSetPlan(agencyId: string, plan: string): Promise<void> {
+  await orThrow(await post(`/v1/admin/agencies/${agencyId}/plan`, { plan }))
+}
+
+export async function adminResetUsage(agencyId: string): Promise<void> {
+  await orThrow(await post(`/v1/admin/agencies/${agencyId}/reset-usage`))
+}
+
+export async function adminGrantCredits(agencyId: string, amount: number, reason?: string): Promise<number> {
+  const res = await orThrow(await post(`/v1/admin/agencies/${agencyId}/credits`, { amount, reason }))
+  return (await res.json()).balance
+}
+
+export interface CreditLedgerEntry {
+  id: string
+  project_id: string | null
+  project_name: string | null
+  delta: number
+  kind: string
+  reason: string | null
+  balance_after: number | null
+  created_at: string
+}
+
+export async function adminCreditLedger(agencyId: string): Promise<CreditLedgerEntry[]> {
+  const res = await orThrow(await get(`/v1/admin/agencies/${agencyId}/ledger`))
+  return (await res.json()).entries ?? []
 }
 
 // ===== Product photos on an existing project (staff) =====

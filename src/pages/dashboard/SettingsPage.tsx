@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { useAgency, useProjects } from '../../hooks/useData'
+import { useAgency } from '../../hooks/useData'
 import { updateAgency, updateProfileName } from '../../lib/api'
 import { plans } from '../../data/plans'
 import { formatDate } from '../../lib/format'
+import UsagePanel from '../../components/dashboard/UsagePanel'
 
 export default function SettingsPage() {
   const { user, demoMode, refreshProfile } = useAuth()
   const { data: agency, reload: reloadAgency } = useAgency()
-  const { data: projects } = useProjects()
 
   const [name, setName] = useState(user?.name ?? '')
   const [agencyName, setAgencyName] = useState('')
@@ -196,23 +196,15 @@ export default function SettingsPage() {
             Change Plan
           </Link>
         </div>
-        <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/5">
-          <div>
-            <p className="text-brand-600 text-xs font-heading uppercase tracking-wide mb-1">Projects</p>
-            <p className="font-heading font-bold">{projects?.length ?? 0} / {plan.projectsIncluded}</p>
-          </div>
-          <div>
-            <p className="text-brand-600 text-xs font-heading uppercase tracking-wide mb-1">Generations</p>
-            <p className="font-heading font-bold">{agency?.usage_generations ?? 0} / {plan.generationsPerMonth}</p>
-          </div>
-          <div>
-            <p className="text-brand-600 text-xs font-heading uppercase tracking-wide mb-1">Revisions</p>
-            <p className="font-heading font-bold">{agency?.usage_revisions ?? 0} / {plan.revisionsIncluded}</p>
-          </div>
-        </div>
-        <p className="text-brand-700 text-xs font-body mt-4">
-          Online billing (Stripe) is coming soon — plan changes are handled manually until then.
+        <p className="text-brand-700 text-xs font-body pt-4 border-t border-white/5">
+          Online billing (Stripe) is coming soon — plan changes and credit top-ups are handled manually until then.
         </p>
+      </div>
+
+      {/* Usage — every meter, what's left, and how to get more */}
+      <div className="mb-6">
+        <h2 className="font-heading font-bold text-lg mb-4">Usage</h2>
+        <UsagePanel />
       </div>
 
       {/* Danger Zone */}

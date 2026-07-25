@@ -18,6 +18,7 @@ import ProductPhotos from '../../components/dashboard/ProductPhotos'
 import AdminPlayground from './AdminPlayground'
 import AdminInfluencers from './AdminInfluencers'
 import AdminMediaLab from './AdminMediaLab'
+import AdminBilling from './AdminBilling'
 
 /**
  * Platform-admin mission control (Brandscape staff only): human QC across
@@ -37,7 +38,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default function AdminPage() {
   const { user } = useAuth()
-  const [tab, setTab] = useState<'projects' | 'influencers' | 'medialab' | 'playground'>('projects')
+  const [tab, setTab] = useState<'projects' | 'influencers' | 'medialab' | 'billing' | 'playground'>('projects')
   const [projects, setProjects] = useState<AdminProjectSummary[] | null>(null)
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -105,6 +106,7 @@ export default function AdminPage() {
             { id: 'projects', label: 'Projects & QC' },
             { id: 'influencers', label: 'Influencers' },
             { id: 'medialab', label: 'Media Lab' },
+            { id: 'billing', label: 'Plans & Credits' },
             { id: 'playground', label: 'AI Playground' },
           ] as const
         ).map((t) => (
@@ -137,6 +139,8 @@ export default function AdminPage() {
 
       {tab === 'playground' ? (
         <AdminPlayground />
+      ) : tab === 'billing' ? (
+        <AdminBilling />
       ) : tab === 'medialab' ? (
         <AdminMediaLab />
       ) : tab === 'influencers' ? (

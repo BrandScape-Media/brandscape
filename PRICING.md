@@ -56,6 +56,71 @@ After editing: commit + push → Railway redeploys automatically.
 - Generated media (images/video/TTS): same R2 bucket under `generated/…`,
   counts against the same `storageGb` quota.
 
+## Credits — the meter that prices generation
+
+Action counters can't price media. "Generate Everything" is **one** press of
+one button and ~40 renders, so metering button presses caps annoyance, not
+spend. Credits are charged **per rendered asset**, weighted by cost:
+
+| Asset | Credits | ~our cost |
+|---|---|---|
+| Image (product / composite) | 1 | $0.04 |
+| Voiceover line | 2 | $0.08 |
+| B-roll clip | 6 | $0.24 |
+| Talking-head clip | 10 | $0.40 |
+
+One credit ≈ **$0.04** of render cost. A full six-script project shoot
+(≈16 images + 12 VOs + 13 clips) ≈ **150 credits ≈ $6**.
+
+### Included per month
+
+| Tier | Credits | ≈ full shoots | Deliverable projects |
+|---|---|---|---|
+| Starter ($299) | 600 | 4 | 1 of 3 |
+| Professional ($799) | 3,000 | 20 | all 15 |
+| Enterprise ($1,999) | 12,000 | 80 | unlimited |
+
+### Top-up packs (overage)
+
+| Pack | Price | Per credit |
+|---|---|---|
+| 250 | $49 | $0.196 |
+| 600 | $99 | $0.165 |
+| 1,500 | $199 | $0.133 |
+
+Sold at roughly 4–5x render cost — normal for managed AI infrastructure once
+support, storage, orchestration and failed renders are absorbed. Bigger packs
+are cheaper per credit to pull agencies upward. Purchased credits roll over;
+the monthly allowance does not.
+
+**Spend order:** monthly allowance first, then purchased balance, so bought
+credits are never burned while the plan still has room.
+
+### Where credits live
+
+- `src/lib/plans.js` (server) — `creditsPerMonth`, `CREDIT_WEIGHTS`,
+  `CREDIT_PACKS`. Source of truth.
+- `src/data/plans.ts` (this repo) — display copy + demo fallback.
+- `agencies.usage_credits` (allowance spent this cycle) and
+  `agencies.credit_balance` (purchased, rolls over).
+- `credit_ledger` — every movement, with the project it was spent on.
+- `consume_credits()` / `grant_credits()` / `refund_credits()` — atomic,
+  service-role only. A render charges up front and refunds on failure.
+
+### Deliverables gate
+
+`deliverableProjects` is enforced by a **database trigger**
+(`enforce_deliverable_limit`), because projects advance stage straight from
+the browser under RLS — there's no orchestrator route to hook. That means the
+number also lives in `deliverable_project_limit()` in SQL. Three places:
+plans.ts, plans.js, and that SQL function. Change all three together.
+
+### Staff controls
+
+Mission Control → **Plans & Credits**: change any agency's tier, reset its
+counters, grant or claw back credits, and read the credit ledger. No SQL
+needed.
+
 ## Recipe: changing a tier after market research
 
 Example — make Professional $899 with 20 projects and 400 generations:

@@ -20,9 +20,44 @@ export interface Agency {
   usage_generations: number
   usage_revisions: number
   usage_regenerations: number
+  /** rendered-asset credits spent from this cycle's plan allowance */
+  usage_credits: number
+  /** purchased credits, roll over between months */
+  credit_balance: number
   usage_storage: number
   billing_cycle_start?: string | null
   created_at: string
+}
+
+// ===== Usage / credits =====
+
+export interface UsageMeter {
+  used: number
+  limit: number
+}
+
+/** Everything the usage dashboard shows, straight from server-side limits. */
+export interface UsageSnapshot {
+  plan: PlanTier
+  cycle_start: string | null
+  meters: {
+    generations: UsageMeter
+    revisions: UsageMeter
+    regenerations: UsageMeter
+    credits: UsageMeter
+    projects: UsageMeter
+    deliverable_projects: UsageMeter
+  }
+  credit_balance: number
+  credit_weights: Record<string, number>
+  credits_per_project_shoot: number
+  packs: CreditPack[]
+}
+
+export interface CreditPack {
+  id: string
+  credits: number
+  priceUsd: number
 }
 
 // ===== Plans =====
@@ -45,6 +80,10 @@ export interface Plan {
   generationsPerMonth: number
   /** Raws media actions/month (regenerate a card, "generate all/everything") */
   regenerationsPerMonth: number
+  /** rendered-asset credits included each month */
+  creditsPerMonth: number
+  /** how many projects may reach the Deliverables stage */
+  deliverableProjects: number
   storageGb: number
   prioritySupport: boolean
   customWorkflows: boolean
