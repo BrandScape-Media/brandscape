@@ -5,6 +5,7 @@ import {
   adminResetUsage,
   adminGrantCredits,
   adminCreditLedger,
+  adminProvisionBilling,
   type AdminAgency,
   type CreditLedgerEntry,
 } from '../../lib/orchestrator'
@@ -31,6 +32,8 @@ export default function AdminBilling() {
   const [ledger, setLedger] = useState<CreditLedgerEntry[]>([])
   const [grantFor, setGrantFor] = useState<string | null>(null)
   const [grantAmount, setGrantAmount] = useState('')
+  const [provisioned, setProvisioned] = useState<number | null>(null)
+  const [liveMode, setLiveMode] = useState<boolean | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -97,9 +100,26 @@ export default function AdminBilling() {
       )}
 
       <div className="bg-brand-900/20 border border-white/5 rounded-xl p-5">
-        <h3 className="font-heading font-semibold text-xs text-brand-300 tracking-wider mb-1">CREDIT PACKS</h3>
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-1">
+          <h3 className="font-heading font-semibold text-xs text-brand-300 tracking-wider">STRIPE CATALOGUE</h3>
+          <button
+            onClick={() => run('provision', async () => {
+              const res = await adminProvisionBilling()
+              setProvisioned(res.prices.length)
+              setLiveMode(res.live_mode)
+            }, 'Stripe products and prices are in sync.')}
+            disabled={busy === 'provision'}
+            className="px-3 py-1.5 border border-white/10 text-brand-300 hover:text-white hover:border-white/25 font-heading text-[11px] rounded-lg transition-all disabled:opacity-40"
+          >
+            {busy === 'provision' ? 'Provisioning…' : 'Provision in Stripe'}
+          </button>
+        </div>
         <p className="text-brand-600 text-[11px] font-body mb-3">
-          What a top-up sells for. Take payment however you like for now, then grant the credits below.
+          Creates the three tiers (monthly + yearly) and the credit packs in Stripe from the server&apos;s plan
+          definitions, and records their price IDs. Safe to re-run — it reuses anything that already exists.
+          {provisioned !== null && (
+            <span className="text-green-400"> {provisioned} prices in sync{liveMode === false ? ' (test mode)' : liveMode ? ' (LIVE)' : ''}.</span>
+          )}
         </p>
         <div className="flex flex-wrap gap-2">
           {creditPacks.map((p) => (
@@ -109,6 +129,10 @@ export default function AdminBilling() {
             </span>
           ))}
         </div>
+        <p className="text-brand-700 text-[10px] font-body mt-3">
+          Grants below stay available regardless — use them for comped credits or to fix a payment taken outside
+          Stripe. Anything bought through Checkout is granted automatically by the webhook.
+        </p>
       </div>
 
       {agencies === null ? (

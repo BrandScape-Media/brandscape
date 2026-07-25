@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { getUsage } from '../../lib/orchestrator'
+import { getUsage, getBillingConfig, startCheckout, openBillingPortal, type BillingConfig } from '../../lib/orchestrator'
 import { plans, creditPacks, creditWeights, creditsPerProjectShoot } from '../../data/plans'
 import type { UsageSnapshot } from '../../types'
 
@@ -36,15 +36,42 @@ function toneFor(percent: number) {
 export default function UsagePanel() {
   const { demoMode } = useAuth()
   const [usage, setUsage] = useState<UsageSnapshot | null>(null)
+  const [billing, setBilling] = useState<BillingConfig | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [wantCredits, setWantCredits] = useState(false)
+  const [buying, setBuying] = useState<string | null>(null)
 
   useEffect(() => {
     if (demoMode) return
     getUsage()
       .then(setUsage)
       .catch((err) => setError(err instanceof Error ? err.message : 'Could not load usage.'))
+    // billing is optional — if Stripe isn't switched on the panel still works
+    getBillingConfig().then(setBilling).catch(() => setBilling({ configured: false, packs: [], tiers: [] }))
   }, [demoMode])
+
+  /** Hand off to Stripe's hosted page; card details never touch our app. */
+  const buy = async (packId: string) => {
+    setBuying(packId)
+    setError(null)
+    try {
+      window.location.href = await startCheckout({ kind: 'credits', pack: packId })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not start checkout.')
+      setBuying(null)
+    }
+  }
+
+  const manage = async () => {
+    setBuying('portal')
+    setError(null)
+    try {
+      window.location.href = await openBillingPortal()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not open the billing portal.')
+      setBuying(null)
+    }
+  }
 
   // demo mode has no API — show the starter plan's shape with sample numbers
   const demo: UsageSnapshot | null = useMemo(() => {
@@ -87,8 +114,11 @@ export default function UsagePanel() {
   const creditsLeft = Math.max(m.credits.limit - m.credits.used, 0) + data.credit_balance
   const creditPct = pct(m.credits.used, m.credits.limit)
   const shootsLeft = Math.floor(creditsLeft / (data.credits_per_project_shoot || 150))
-  const packs = data.packs?.length ? data.packs : creditPacks
+  // live Stripe prices win over the bundled copy, so the button and the
+  // amount charged can never disagree
+  const packs = billing?.configured && billing.packs.length ? billing.packs : data.packs?.length ? data.packs : creditPacks
   const weights = data.credit_weights ?? creditWeights
+  const canBuy = !demoMode && !!billing?.configured && billing.packs.length > 0
 
   const outOfCredits = creditsLeft <= 0
   const lowCredits = !outOfCredits && creditsLeft < (data.credits_per_project_shoot || 150)
@@ -151,6 +181,15 @@ export default function UsagePanel() {
           >
             {wantCredits ? 'Hide packs' : 'Buy more credits'}
           </button>
+          {billing?.has_customer && (
+            <button
+              onClick={() => void manage()}
+              disabled={buying === 'portal'}
+              className="px-4 py-2 border border-white/15 text-white font-heading text-xs rounded-lg hover:border-white/30 transition-colors disabled:opacity-40"
+            >
+              {buying === 'portal' ? 'Opening…' : 'Manage billing'}
+            </button>
+          )}
           <span className="text-brand-700 text-[11px] font-body">
             {Object.entries(weights).map(([k, v]) => `${k} ${v}`).join(' · ')}
           </span>
@@ -159,26 +198,46 @@ export default function UsagePanel() {
         {wantCredits && (
           <div className="mt-4 pt-4 border-t border-white/[0.06]">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {packs.map((pack) => (
-                <div key={pack.id} className="rounded-xl border border-white/10 bg-brand-900/40 p-4">
-                  <p className="font-heading font-bold text-lg text-white">{pack.credits.toLocaleString()}</p>
-                  <p className="text-brand-500 text-[11px] font-body">credits</p>
-                  <p className="font-heading font-bold text-sm text-white mt-3">${pack.priceUsd}</p>
-                  <p className="text-brand-700 text-[10px] font-body">
-                    ${(pack.priceUsd / pack.credits).toFixed(3)} per credit ·{' '}
-                    {Math.floor(pack.credits / (data.credits_per_project_shoot || 150))} shoot
-                    {Math.floor(pack.credits / (data.credits_per_project_shoot || 150)) === 1 ? '' : 's'}
-                  </p>
-                </div>
-              ))}
+              {packs.map((pack) => {
+                const shoots = Math.floor(pack.credits / (data.credits_per_project_shoot || 150))
+                return (
+                  <div key={pack.id} className="rounded-xl border border-white/10 bg-brand-900/40 p-4 flex flex-col">
+                    <p className="font-heading font-bold text-lg text-white">{pack.credits.toLocaleString()}</p>
+                    <p className="text-brand-500 text-[11px] font-body">credits</p>
+                    <p className="font-heading font-bold text-sm text-white mt-3">${pack.priceUsd}</p>
+                    <p className="text-brand-700 text-[10px] font-body">
+                      ${(pack.priceUsd / pack.credits).toFixed(3)} per credit · {shoots} shoot{shoots === 1 ? '' : 's'}
+                    </p>
+                    {canBuy && (
+                      <button
+                        onClick={() => void buy(pack.id)}
+                        disabled={!!buying}
+                        className="mt-3 w-full px-3 py-2 bg-white text-black font-heading font-bold text-[11px] rounded-lg hover:bg-brand-200 transition-colors disabled:opacity-40"
+                      >
+                        {buying === pack.id ? 'Opening…' : 'Buy'}
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
             </div>
-            <p className="text-brand-500 text-[11px] font-body mt-3">
-              Card payment isn&apos;t switched on yet — email{' '}
-              <a href="mailto:billing@brandscape.media" className="text-white underline underline-offset-2 hover:text-brand-200">
-                billing@brandscape.media
-              </a>{' '}
-              and we&apos;ll add the credits to your account the same day. Purchased credits never expire.
-            </p>
+            {canBuy ? (
+              <p className="text-brand-600 text-[11px] font-body mt-3">
+                Payment is handled by Stripe — card details never touch Brandscape. Credits land the moment the
+                payment clears and never expire.
+                {billing?.live_mode === false && (
+                  <span className="text-amber-400"> Test mode: no real money moves.</span>
+                )}
+              </p>
+            ) : (
+              <p className="text-brand-500 text-[11px] font-body mt-3">
+                Card payment isn&apos;t switched on yet — email{' '}
+                <a href="mailto:billing@brandscape.media" className="text-white underline underline-offset-2 hover:text-brand-200">
+                  billing@brandscape.media
+                </a>{' '}
+                and we&apos;ll add the credits to your account the same day. Purchased credits never expire.
+              </p>
+            )}
           </div>
         )}
       </div>

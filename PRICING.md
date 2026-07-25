@@ -121,6 +121,56 @@ Mission Control → **Plans & Credits**: change any agency's tier, reset its
 counters, grant or claw back credits, and read the credit ledger. No SQL
 needed.
 
+## Stripe billing
+
+Money moves only through Stripe-hosted pages — Checkout to buy, the Customer
+Portal to change or cancel. Card details never reach our servers or the
+browser bundle.
+
+**Test vs live is decided purely by which key is set.** `sk_test_…` uses
+Stripe's sandbox; `sk_live_…` moves real money. `/health` reports
+`stripe_live_mode` so the two can never be confused.
+
+### One-time setup
+
+1. Railway env vars on the orchestrator:
+   - `STRIPE_SECRET_KEY` — start with the **test** key
+   - `STRIPE_WEBHOOK_SECRET` — from step 3
+2. Mission Control → Plans & Credits → **Provision in Stripe**. Creates the
+   three tiers (monthly + yearly) and the three credit packs from
+   `src/lib/plans.js`, and records their price IDs in `billing_prices`.
+   Idempotent — re-running reuses anything that already exists.
+3. Stripe Dashboard → Developers → Webhooks → add endpoint
+   `https://api.brandscape.media/v1/billing/webhook`, subscribe to
+   `checkout.session.completed`, `customer.subscription.created`,
+   `customer.subscription.updated`, `customer.subscription.deleted`.
+   Copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
+4. Test with card `4242 4242 4242 4242`, then swap both values for the live
+   key + live webhook secret and run **Provision in Stripe** again (the live
+   catalogue is separate; rows are scoped by `livemode`).
+
+### What grants what
+
+**Only the webhook grants anything.** A user landing on the success URL
+proves nothing — they can just open it — so the success page is cosmetic and
+every entitlement waits for a signed event.
+
+| Event | Effect |
+|---|---|
+| `checkout.session.completed` (mode=payment) | `grant_credits()` for the pack's credits |
+| `customer.subscription.created/updated` | sets `agencies.plan` from the price's tier; `active`/`trialing`/`past_due` keep the tier, anything else drops to starter |
+| `customer.subscription.deleted` | back to starter |
+
+Every event id is recorded in `stripe_events` before handling, so Stripe's
+retries are exactly-once — without it a redelivered checkout would grant the
+credits twice. If a handler throws, the marker is deleted so the retry works.
+
+### Staff fallbacks
+
+Mission Control grants still work for comped credits or payments taken
+outside Stripe. They're recorded in the same ledger with kind `grant` rather
+than `purchase`.
+
 ## Recipe: changing a tier after market research
 
 Example — make Professional $899 with 20 projects and 400 generations:

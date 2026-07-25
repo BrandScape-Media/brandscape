@@ -297,6 +297,42 @@ export async function getUsage(): Promise<UsageSnapshot> {
   return res.json()
 }
 
+// ===== Stripe billing =====
+
+export interface BillingConfig {
+  configured: boolean
+  live_mode?: boolean
+  has_customer?: boolean
+  subscription_status?: string | null
+  subscription_period_end?: string | null
+  packs: { id: string; credits: number; priceUsd: number }[]
+  tiers: { tier: string; interval: 'month' | 'year'; priceUsd: number }[]
+}
+
+export async function getBillingConfig(): Promise<BillingConfig> {
+  const res = await orThrow(await get('/v1/billing/config'))
+  return res.json()
+}
+
+/** Returns the Stripe Checkout URL to send the browser to. */
+export async function startCheckout(
+  body: { kind: 'credits'; pack: string } | { kind: 'subscription'; tier: string; interval: 'month' | 'year' },
+): Promise<string> {
+  const res = await orThrow(await post('/v1/billing/checkout', body))
+  return (await res.json()).url
+}
+
+/** Stripe-hosted portal: change plan, update card, cancel, get invoices. */
+export async function openBillingPortal(): Promise<string> {
+  const res = await orThrow(await post('/v1/billing/portal'))
+  return (await res.json()).url
+}
+
+export async function adminProvisionBilling(): Promise<{ live_mode: boolean; prices: { lookup_key: string; price_id: string }[] }> {
+  const res = await orThrow(await post('/v1/admin/billing/provision'))
+  return res.json()
+}
+
 // ===== Billing controls (staff) =====
 
 export interface AdminAgency {
