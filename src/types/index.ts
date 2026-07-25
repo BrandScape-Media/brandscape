@@ -278,6 +278,9 @@ export interface Job {
   created_at: string
   started_at?: string | null
   finished_at?: string | null
+  /** only populated by the agency-wide query, which needs a link target */
+  project_id?: string | null
+  project_name?: string | null
 }
 
 // ===== Client share links & comments =====

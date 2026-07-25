@@ -11,7 +11,9 @@ import {
   type BillingConfig,
 } from '../../lib/orchestrator'
 import { takeCheckoutIntent } from '../../lib/checkoutIntent'
+import { creditsRemaining } from '../../lib/format'
 import { plans, planFor, creditPacks, creditWeights, creditsPerProjectShoot } from '../../data/plans'
+import { demoUsage } from '../../data/demo'
 import UsageMeters, { daysToReset } from '../../components/dashboard/UsageMeters'
 import CreditPackGrid from '../../components/dashboard/CreditPackGrid'
 import OfferStrip from '../../components/dashboard/OfferStrip'
@@ -187,27 +189,9 @@ export default function BillingPage() {
     }
   }
 
-  // demo mode has no API — show the starter shape with sample numbers
-  const demo: UsageSnapshot | null = useMemo(() => {
-    if (!demoMode) return null
-    const p = plans[0]
-    return {
-      plan: 'starter',
-      cycle_start: null,
-      meters: {
-        generations: { used: 31, limit: p.generationsPerMonth },
-        revisions: { used: 2, limit: p.revisionsIncluded },
-        regenerations: { used: 63, limit: p.regenerationsPerMonth },
-        credits: { used: 486, limit: p.creditsPerMonth },
-        projects: { used: 2, limit: p.projectsIncluded },
-        deliverable_projects: { used: 1, limit: p.deliverableProjects },
-      },
-      credit_balance: 0,
-      credit_weights: creditWeights,
-      credits_per_project_shoot: creditsPerProjectShoot,
-      packs: creditPacks,
-    }
-  }, [demoMode])
+  // Demo mode has no API. The snapshot lives in demo.ts and is derived from
+  // demoAgency, so this page and the chrome quote the same fake numbers.
+  const demo: UsageSnapshot | null = useMemo(() => (demoMode ? demoUsage() : null), [demoMode])
 
   const data = usage ?? demo
   const days = daysToReset()
@@ -258,7 +242,8 @@ export default function BillingPage() {
   const m = data.meters
   const shootCost = data.credits_per_project_shoot || creditsPerProjectShoot
   const allowanceLeft = Math.max(m.credits.limit - m.credits.used, 0)
-  const creditsLeft = allowanceLeft + data.credit_balance
+  // Shared with the top-bar credit chip so the two can't drift apart.
+  const creditsLeft = creditsRemaining(m.credits.used, m.credits.limit, data.credit_balance)
   const usedPct = m.credits.limit > 0 ? Math.min(100, Math.round((m.credits.used / m.credits.limit) * 100)) : 100
   const shootsLeft = Math.floor(creditsLeft / shootCost)
   const outOfCredits = creditsLeft <= 0

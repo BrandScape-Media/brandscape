@@ -209,6 +209,28 @@ export async function listActiveJobs(projectId: string): Promise<Job[]> {
   return data ?? []
 }
 
+/**
+ * Every job still queued/running across the agency — feeds the top-bar
+ * indicator, so a run you started on one page is still visible from another.
+ * RLS already scopes `jobs` to the caller's agency, so there's no filter here
+ * beyond status. The project join gives the pill somewhere to link to.
+ */
+export async function listAgencyActiveJobs(): Promise<Job[]> {
+  const { data, error } = await getSupabase()
+    .from('jobs')
+    .select('id, stage, type, status, error, created_at, started_at, finished_at, project_id, projects(name)')
+    .in('status', ['queued', 'running'])
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []).map((row) => {
+    // Supabase types the embedded relation as an array or an object depending
+    // on how it infers the FK; normalise rather than trusting either shape.
+    const { projects, ...job } = row as typeof row & { projects?: { name?: string } | { name?: string }[] | null }
+    const project = Array.isArray(projects) ? projects[0] : projects
+    return { ...job, project_name: project?.name ?? null } as Job
+  })
+}
+
 export async function deleteProject(projectId: string): Promise<void> {
   const { error } = await getSupabase().from('projects').delete().eq('id', projectId)
   if (error) throw error

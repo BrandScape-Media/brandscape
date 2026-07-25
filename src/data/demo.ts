@@ -1,5 +1,6 @@
-import type { Agency, Client, ClientAsset, MediaAsset, Project, ProjectStage, StageContentData, StageStatus, WorkflowStage } from '../types'
+import type { Agency, Client, ClientAsset, MediaAsset, Project, ProjectStage, StageContentData, StageStatus, UsageSnapshot, WorkflowStage } from '../types'
 import { workflowStages } from './workflow'
+import { creditPacks, creditWeights, creditsPerProjectShoot, planFor } from './plans'
 
 // Showcase dataset used when the app runs in demo mode (no Supabase
 // session). Shapes mirror the real database rows exactly so pages are
@@ -24,6 +25,37 @@ export const demoAgency: Agency = {
   usage_storage: 2.4 * 1024 * 1024 * 1024,
   billing_cycle_start: daysAgo(11),
   created_at: daysAgo(60),
+}
+
+/**
+ * The usage snapshot demo mode shows in place of /v1/usage.
+ *
+ * Derived from `demoAgency` rather than hand-written, so the plan chip in the
+ * sidebar, the credit chip in the top bar and the Billing page can't tell you
+ * three different stories about the same fake account.
+ *
+ * A function, not a const: evaluating this at module scope means calling
+ * `planFor` during module init, which explodes on any import cycle in the
+ * graph. Callers use it in render, by which point everything is initialised.
+ */
+export function demoUsage(): UsageSnapshot {
+  const p = planFor(demoAgency.plan)
+  return {
+    plan: demoAgency.plan,
+    cycle_start: demoAgency.billing_cycle_start ?? null,
+    meters: {
+      generations: { used: demoAgency.usage_generations, limit: p.generationsPerMonth },
+      revisions: { used: demoAgency.usage_revisions, limit: p.revisionsIncluded },
+      regenerations: { used: demoAgency.usage_regenerations, limit: p.regenerationsPerMonth },
+      credits: { used: demoAgency.usage_credits, limit: p.creditsPerMonth },
+      projects: { used: 2, limit: p.projectsIncluded },
+      deliverable_projects: { used: 1, limit: p.deliverableProjects },
+    },
+    credit_balance: demoAgency.credit_balance,
+    credit_weights: creditWeights,
+    credits_per_project_shoot: creditsPerProjectShoot,
+    packs: creditPacks,
+  }
 }
 
 export const demoClients: Client[] = [

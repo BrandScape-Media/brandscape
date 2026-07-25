@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import * as api from '../lib/api'
+import { getSupabase } from '../lib/supabase/client'
 import { demoAgency, demoAssets, demoClientAssets, demoClients, demoProjects } from '../data/demo'
-import type { Agency, Client, ClientAsset, MediaAsset, Project } from '../types'
+import type { Agency, Client, ClientAsset, Job, MediaAsset, Project } from '../types'
 
 interface AsyncState<T> {
   data: T | null
@@ -83,4 +84,30 @@ export function useAssets(): AsyncState<MediaAsset[]> {
 
 export function useClientAssets(): AsyncState<ClientAsset[]> {
   return useAsyncData(api.listClientAssets, demoClientAssets)
+}
+
+/**
+ * Jobs running anywhere in the agency, kept live over Realtime.
+ *
+ * The whole point is that it stays correct while you're on a different page,
+ * so a poll-on-mount isn't enough — any `jobs` change refetches. Demo mode
+ * has no jobs table, so it returns an empty list and never subscribes.
+ */
+export function useActiveJobs(): AsyncState<Job[]> {
+  const { demoMode } = useAuth()
+  const state = useAsyncData(api.listAgencyActiveJobs, [] as Job[])
+  const reload = state.reload
+
+  useEffect(() => {
+    if (demoMode) return
+    const channel = getSupabase()
+      .channel('agency-active-jobs')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => reload())
+      .subscribe()
+    return () => {
+      void getSupabase().removeChannel(channel)
+    }
+  }, [demoMode, reload])
+
+  return state
 }

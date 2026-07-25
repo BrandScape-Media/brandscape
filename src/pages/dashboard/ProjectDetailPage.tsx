@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { workflowStages } from '../../data/workflow'
 import WorkflowIcon from '../../components/WorkflowIcon'
 import { useAuth } from '../../context/AuthContext'
+import { useSetBreadcrumb } from '../../context/BreadcrumbContext'
 import { useProject } from '../../hooks/useData'
 import { updateStage, updateProject, deleteProject, getLatestStageJob, listActiveJobs } from '../../lib/api'
 import { runStage, reviseStage } from '../../lib/orchestrator'
@@ -44,6 +45,12 @@ export default function ProjectDetailPage() {
   const [activeRuns, setActiveRuns] = useState<Map<WorkflowStage, 'llm_generate' | 'llm_revise'>>(new Map())
   // the latest Raws phase job (shoot_run) — RawsWorkspace mirrors its status
   const [shootJob, setShootJob] = useState<Job | null>(null)
+
+  // The top bar renders the trail; this page just names itself. Empty while
+  // loading, so the chrome shows "Projects" rather than a flash of "undefined".
+  useSetBreadcrumb(
+    project ? [{ label: 'Projects', to: '/dashboard/projects' }, { label: project.name }] : [],
+  )
 
   const stagesByKey = useMemo(() => {
     const map = new Map<WorkflowStage, ProjectStage>()
@@ -351,14 +358,7 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="p-6 lg:p-8 max-w-[1600px]">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-xs text-brand-600 font-body mb-4">
-        <button onClick={() => navigate('/dashboard/projects')} className="hover:text-brand-300 transition-colors">Projects</button>
-        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-        <span className="text-brand-400">{project.name}</span>
-      </nav>
-
-      {/* Header */}
+      {/* Header — the breadcrumb lives in the top bar (BreadcrumbContext) */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-white/5 flex items-center justify-center">

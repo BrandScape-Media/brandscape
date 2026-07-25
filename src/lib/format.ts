@@ -24,6 +24,24 @@ export function formatTimestamp(seconds?: number | null): string {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
+/**
+ * Credits an agency can still spend: what's left of this cycle's plan
+ * allowance, plus purchased credits (which roll over).
+ *
+ * Both the Billing page and the top-bar chip read this. They used to compute
+ * it separately, which is exactly how two numbers on the same screen start
+ * disagreeing. `used` and `limit` come from /v1/usage where available; the
+ * agency row is the fallback for the sidebar, which doesn't fetch usage.
+ */
+export function creditsRemaining(
+  used: number | null | undefined,
+  limit: number | null | undefined,
+  purchased: number | null | undefined,
+): number {
+  const allowanceLeft = Math.max((limit ?? 0) - (used ?? 0), 0)
+  return allowanceLeft + (purchased ?? 0)
+}
+
 export function formatBytes(bytes?: number | null): string {
   if (!bytes) return '0 B'
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
