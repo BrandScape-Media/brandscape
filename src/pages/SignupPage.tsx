@@ -85,7 +85,7 @@ export default function SignupPage() {
           </p>
           <div className="mt-16 space-y-5">
             {[
-              '7-day trial on any plan',
+              '7-day trial on Starter',
               'Full access to all 7 pipeline stages',
               'Nothing charged until day seven',
               'Cancel anytime, in two clicks',
@@ -116,9 +116,13 @@ export default function SignupPage() {
           <div className="mb-8">
             <h1 className="font-heading font-bold text-2xl text-white">Create your account</h1>
             <p className="text-brand-500 text-sm font-body mt-2">
+              {/* only Starter carries the trial, so don't promise one on a
+                  plan that starts billing on day one */}
               {chosen
-                ? `${chosen.name} — 7-day trial. We'll take you to checkout once your agency is set up.`
-                : '7-day trial on any plan. Nothing is charged until day seven.'}
+                ? chosen.tier === 'starter'
+                  ? `${chosen.name} — 7-day trial. We'll take you to checkout once your agency is set up.`
+                  : `${chosen.name}. We'll take you to checkout once your agency is set up.`
+                : '7-day trial on Starter. Nothing is charged until day seven.'}
             </p>
           </div>
 
@@ -224,6 +228,8 @@ export default function SignupPage() {
                   <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
                   Creating account...
                 </span>
+              ) : chosen && chosen.tier !== 'starter' ? (
+                'CREATE ACCOUNT'
               ) : (
                 'START FREE TRIAL'
               )}
