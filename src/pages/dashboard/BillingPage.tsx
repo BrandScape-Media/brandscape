@@ -7,6 +7,7 @@ import {
   getBillingConfig,
   startCheckout,
   openBillingPortal,
+  ApiError,
   type BillingConfig,
 } from '../../lib/orchestrator'
 import { takeCheckoutIntent } from '../../lib/checkoutIntent'
@@ -141,7 +142,13 @@ export default function BillingPage() {
       try {
         window.location.href = await startCheckout({ kind: 'subscription', tier, interval })
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not start checkout.')
+        // A plan chosen before signing up can arrive here after a subscription
+        // already exists. Say so plainly rather than showing a raw 409.
+        if (err instanceof ApiError && err.code === 'already_subscribed') {
+          setNotice('You already have a subscription — use Switch to change plan so Stripe prorates it.')
+        } else {
+          setError(err instanceof Error ? err.message : 'Could not start checkout.')
+        }
         setBusy(null)
       }
     },
@@ -263,6 +270,10 @@ export default function BillingPage() {
   const canBuy = !demoMode && !!billing?.configured && billing.packs.length > 0
   const canSubscribe = !demoMode && !!billing?.configured
   const subscribed = ['active', 'trialing', 'past_due'].includes(billing?.subscription_status ?? '')
+  // The server decides this (TRIAL_TIERS); the fallback matches it so a card
+  // never advertises a trial that checkout would then refuse to start.
+  const trialTiers = billing?.trial_tiers ?? ['starter']
+  const canTrial = (tier: PlanTier) => billing?.has_trialed === false && trialTiers.includes(tier)
   const trialing = billing?.subscription_status === 'trialing'
   const trialDaysLeft = billing?.trial_ends_at
     ? Math.max(0, Math.ceil((new Date(billing.trial_ends_at).getTime() - Date.now()) / 86_400_000))
@@ -597,7 +608,7 @@ export default function BillingPage() {
                     >
                       {busy === plan.tier
                         ? 'OPENING…'
-                        : billing?.has_trialed === false
+                        : canTrial(plan.tier)
                           ? `START ${billing?.trial_days ?? 7}-DAY TRIAL`
                           : 'SUBSCRIBE'}
                     </button>
@@ -619,8 +630,9 @@ export default function BillingPage() {
         )}
         {billing?.has_trialed === false && canSubscribe && (
           <p className="text-brand-600 text-[11px] font-body mt-4">
-            Your trial runs {billing?.trial_days ?? 7} days. Nothing is charged until it ends, and cancelling
-            before then costs nothing. One trial per agency.
+            The {billing?.trial_days ?? 7}-day trial is on Starter. Nothing is charged until it ends, and
+            cancelling before then costs nothing. One trial per agency; Professional and Enterprise start
+            billing straight away.
           </p>
         )}
       </div>

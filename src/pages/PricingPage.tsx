@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { startCheckout, getPublicOffers } from '../lib/orchestrator'
+import { startCheckout, getPublicOffers, ApiError } from '../lib/orchestrator'
 import {
   plans,
   creditPacks,
@@ -60,6 +60,13 @@ export default function PricingPage() {
     try {
       window.location.href = await startCheckout({ kind: 'subscription', tier, interval })
     } catch (err) {
+      // Already subscribed: Checkout can only mint a second subscription, so
+      // the server refuses. Send them to Billing, where switching goes through
+      // the Portal and Stripe prorates it.
+      if (err instanceof ApiError && err.code === 'already_subscribed') {
+        navigate('/dashboard/billing')
+        return
+      }
       setError(err instanceof Error ? err.message : 'Could not start checkout.')
       setBusy(null)
     }
@@ -82,7 +89,7 @@ export default function PricingPage() {
             <p className="font-body text-brand-400 max-w-xl mx-auto mb-10 text-lg">
               Every plan runs the complete pipeline — research through to finished creatives.
               What changes is how many campaigns you run and how much you generate.
-              Start with a 7-day trial.
+              Start on Starter with a 7-day trial.
             </p>
 
             {offers.length > 0 && (
@@ -158,7 +165,8 @@ export default function PricingPage() {
           <div className="mt-10 text-center">
             <div className="inline-flex flex-wrap justify-center items-center gap-x-3 gap-y-1 px-6 py-4 border border-white/5 rounded-xl bg-brand-900/20">
               <span className="text-brand-400 text-sm font-body">
-                7-day trial &middot; card required, charged when the trial ends &middot; cancel any time before then and you pay nothing
+                7-day trial on Starter &middot; card required, charged when the trial ends &middot; cancel any time
+                before then and you pay nothing &middot; Professional and Enterprise start billing immediately
               </span>
             </div>
           </div>
@@ -284,7 +292,7 @@ export default function PricingPage() {
             <div className="space-y-3">
               <FaqItem
                 question="How does the trial work?"
-                answer="Seven days on whichever plan you pick, with full access. We take card details up front and charge nothing until day seven — cancel before then, in two clicks from your billing page, and you're not billed at all. One trial per agency."
+                answer="Seven days on Starter, with full access to the pipeline. We take card details up front and charge nothing until day seven — cancel before then, in two clicks from your billing page, and you're not billed at all. One trial per agency. Professional and Enterprise don't have a trial: they carry a month's generation allowance, so they start billing on day one. You can upgrade from a trial whenever you're ready, which ends the trial and starts your billing there and then."
               />
               <FaqItem
                 question="What happens if I run out of credits?"
@@ -441,7 +449,13 @@ function PlanCard({
             : 'bg-white text-black hover:bg-brand-200'
         }`}
       >
-        {busy ? 'OPENING…' : signedIn ? `CHOOSE ${plan.name.toUpperCase()}` : 'START 7-DAY TRIAL'}
+        {busy
+          ? 'OPENING…'
+          : signedIn
+            ? `CHOOSE ${plan.name.toUpperCase()}`
+            : plan.tier === 'starter'
+              ? 'START 7-DAY TRIAL'
+              : `GET ${plan.name.toUpperCase()}`}
       </button>
     </div>
   )

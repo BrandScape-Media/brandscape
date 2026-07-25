@@ -34,16 +34,31 @@ async function patch(path: string, body: unknown): Promise<Response> {
   })
 }
 
+/** Errors from the orchestrator, carrying its machine-readable `code`. */
+export class ApiError extends Error {
+  code?: string
+  status: number
+  constructor(message: string, status: number, code?: string) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.code = code
+  }
+}
+
 async function orThrow(res: Response): Promise<Response> {
   if (!res.ok) {
     let message = `Request failed (${res.status})`
+    let code: string | undefined
     try {
       const data = await res.json()
       if (data?.error) message = data.error
+      if (data?.code) code = data.code
     } catch {
       /* keep default */
     }
-    throw new Error(message)
+    // branch on `code`, never on the wording of `message`
+    throw new ApiError(message, res.status, code)
   }
   return res
 }
@@ -310,6 +325,8 @@ export interface BillingConfig {
   has_trialed?: boolean
   trial_ends_at?: string | null
   trial_days?: number
+  /** tiers a trial may start on — entry tier only, so the top tiers can't be farmed */
+  trial_tiers?: PlanTier[]
   packs: { id: string; credits: number; priceUsd: number }[]
   tiers: { tier: string; interval: 'month' | 'year'; priceUsd: number }[]
 }

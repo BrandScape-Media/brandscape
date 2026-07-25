@@ -88,7 +88,12 @@
       "mcp__ac10949e-83ba-4aa5-a489-36aea7ff444e__stripe_api_search",
       "Bash(curl -s -o /dev/null -w \"no-sig: %{http_code}\\\\n\" -X POST https://api.brandscape.media/v1/billing/webhook -H \"Content-Type: application/json\" -d '{\"id\":\"evt_test\",\"type\":\"ping\"}')",
       "Bash(curl -s -X POST https://api.brandscape.media/v1/billing/webhook -H \"Content-Type: application/json\" -H \"Stripe-Signature: t=1,v1=deadbeef\" -d '{\"id\":\"evt_test\",\"type\":\"ping\"}' -w \"\\\\nbad-sig: %{http_code}\\\\n\")",
-      "Bash(curl -s https://api.brandscape.media/v1/billing/offers/public)"
+      "Bash(curl -s https://api.brandscape.media/v1/billing/offers/public)",
+      "Bash(curl -s https://brandscape.media/)",
+      "Bash(gh run *)",
+      "Bash(curl -s \"https://api.github.com/repos/BrandScape-Media/brandscape/actions/runs?per_page=3\")",
+      "Bash(node --check src/lib/plans.js)",
+      "Bash(node --check src/routes/billing.js)"
     ]
   }
 }
