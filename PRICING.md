@@ -183,12 +183,38 @@ every entitlement waits for a signed event.
 | Event | Effect |
 |---|---|
 | `checkout.session.completed` (mode=payment) | `grant_credits()` for the pack's credits |
-| `customer.subscription.created/updated` | sets `agencies.plan` from the price's tier; `active`/`trialing`/`past_due` keep the tier, anything else drops to starter |
-| `customer.subscription.deleted` | back to starter |
+| `customer.subscription.created/updated` | sets `agencies.plan` from the price's tier; `active`/`trialing`/`past_due` keep the tier, anything else drops to `free` |
+| `customer.subscription.deleted` | back to `free` |
 
 Every event id is recorded in `stripe_events` before handling, so Stripe's
 retries are exactly-once — without it a redelivered checkout would grant the
 credits twice. If a handler throws, the marker is deleted so the retry works.
+
+### When a payment succeeds but nothing is granted
+
+Everything below cost us an afternoon on 2026-07-25. The symptom is always
+the same — Stripe says `paid`, the account shows nothing — so work down the
+list in order.
+
+1. **Webhook endpoints, events and signing secrets are per-mode.** An
+   endpoint created with the dashboard's *Test mode* toggle OFF is invisible
+   to test-mode checkouts, and its events never appear in the test events
+   log. Both a live and a test `whsec_…` are 38 characters, so you cannot
+   tell them apart by looking — always Reveal the secret from the specific
+   endpoint showing the failed deliveries.
+2. **Check `/health`.** `stripe_webhook_configured` says only that the env
+   var is set; `stripe_live_mode` says which key is loaded. They can
+   disagree with each other, and that is the bug.
+3. **Read the 400 body in Stripe's delivery log.** The webhook returns a
+   `reason` (`Webhook signature mismatch` = wrong secret, `timestamp outside
+   tolerance` = clock skew, `is not set` = unset var) plus the loaded
+   secret's length and prefix. No secret material, enough to diagnose.
+4. **Nothing is redelivered retroactively.** Stripe only delivers to
+   endpoints that existed when the event fired, so purchases made before the
+   endpoint was created need a manual Resend from the Events page.
+5. **If the DB has the credits but the page doesn't**, it's the frontend.
+   `/dashboard/billing` polls for a few seconds after `?checkout=success`;
+   a hard reload settles whether the grant landed.
 
 ### Staff fallbacks
 
