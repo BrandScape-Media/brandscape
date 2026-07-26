@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase/client'
+import { authErrorMessage } from '../lib/authErrors'
 
 /**
  * Step one of password recovery.
@@ -42,7 +43,7 @@ export default function ForgotPasswordPage() {
       // otherwise this page is an account-enumeration oracle.
       setSent(true)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Could not send the reset link.')
+      setError(authErrorMessage(err, 'Could not send the reset link.'))
     } finally {
       setLoading(false)
     }

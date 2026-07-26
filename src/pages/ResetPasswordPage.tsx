@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase/client'
+import { authErrorMessage } from '../lib/authErrors'
 
 /**
  * Step two of password recovery — where the emailed link lands.
@@ -85,7 +86,7 @@ export default function ResetPasswordPage() {
       // The recovery session is a real session, so they're already signed in.
       setTimeout(() => navigate('/dashboard', { replace: true }), 1200)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Could not update your password.')
+      setError(authErrorMessage(err, 'Could not update your password.'))
       setSaving(false)
     }
   }

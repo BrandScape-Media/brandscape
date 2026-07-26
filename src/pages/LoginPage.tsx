@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { isSupabaseConfigured } from '../lib/supabase/client'
+import { authErrorMessage } from '../lib/authErrors'
 import MetalLogo from '../components/MetalLogo'
 
 export default function LoginPage() {
@@ -21,7 +22,7 @@ export default function LoginPage() {
       await signInWithEmail(email, password)
       navigate('/dashboard')
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Sign in failed')
+      setError(authErrorMessage(err, 'Sign in failed'))
     } finally {
       setLoading(false)
     }

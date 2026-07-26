@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { isSupabaseConfigured } from '../lib/supabase/client'
 import { saveCheckoutIntent } from '../lib/checkoutIntent'
+import { authErrorMessage } from '../lib/authErrors'
 import { plans } from '../data/plans'
 import MetalLogo from '../components/MetalLogo'
 import type { PlanTier } from '../types'
@@ -43,7 +44,7 @@ export default function SignupPage() {
       await signUpWithEmail(email, password, name)
       navigate(landing)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Sign up failed')
+      setError(authErrorMessage(err, 'Sign up failed'))
     } finally {
       setLoading(false)
     }
