@@ -305,6 +305,7 @@ export default function BillingPage() {
         trialing={trialing}
         trialDaysLeft={trialDaysLeft}
         pastDue={billing?.subscription_status === 'past_due'}
+        invoiceUrl={billing?.payment_invoice_url}
         outOfCredits={outOfCredits}
         lowCredits={lowCredits}
         creditsLeft={creditsLeft}
@@ -515,7 +516,7 @@ export default function BillingPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {plans.map((plan) => {
             const isCurrent = plan.tier === currentTier
             const monthly = yearly ? Math.round(priceFor(plan.tier, 'year') / 12) : priceFor(plan.tier, 'month')
@@ -710,6 +711,7 @@ function StatusBanner({
   trialing,
   trialDaysLeft,
   pastDue,
+  invoiceUrl,
   outOfCredits,
   lowCredits,
   creditsLeft,
@@ -723,6 +725,7 @@ function StatusBanner({
   trialing: boolean
   trialDaysLeft: number | null
   pastDue: boolean
+  invoiceUrl?: string | null
   outOfCredits: boolean
   lowCredits: boolean
   creditsLeft: number
@@ -733,14 +736,31 @@ function StatusBanner({
   onManage: () => void
 }) {
   // Most urgent wins — never stack these.
-  if (pastDue) {
+  //
+  // Two independent signals, because they can arrive in either order and
+  // either one alone means the customer needs to act: `past_due` comes from
+  // the subscription, `invoiceUrl`/`payment_failed_at` from the invoice.
+  if (pastDue || invoiceUrl) {
     return (
       <Banner tone="red" title="Your last payment didn't go through">
         <p>
           Stripe will retry, but your plan will lapse if it keeps failing. Updating your card takes a
           minute and fixes it.
         </p>
-        <BannerButton onClick={onManage}>Update card</BannerButton>
+        {/* Stripe's own hosted invoice: one click, no card details near us.
+            Falls back to the Portal when we haven't seen the invoice event. */}
+        {invoiceUrl ? (
+          <a
+            href={invoiceUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="shrink-0 px-4 py-2 bg-white text-black font-heading font-bold text-[11px] rounded-lg hover:bg-brand-200 transition-colors"
+          >
+            Pay now
+          </a>
+        ) : (
+          <BannerButton onClick={onManage}>Update card</BannerButton>
+        )}
       </Banner>
     )
   }

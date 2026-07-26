@@ -239,9 +239,11 @@ export default function SignupPage() {
           {/* Terms */}
           <p className="text-center text-brand-700 text-xs mt-5 font-body">
             By signing up, you agree to our{' '}
-            <a href="#" className="text-brand-500 hover:text-brand-300 transition-colors">Terms</a>
+            {/* real static pages in public/, not routes — they need a 200 for
+                Google verification, and GitHub Pages 404s unknown SPA paths */}
+            <a href="/terms/" className="text-brand-500 hover:text-brand-300 transition-colors">Terms</a>
             {' '}and{' '}
-            <a href="#" className="text-brand-500 hover:text-brand-300 transition-colors">Privacy Policy</a>
+            <a href="/privacy/" className="text-brand-500 hover:text-brand-300 transition-colors">Privacy Policy</a>
           </p>
 
           {/* Demo Mode Banner */}

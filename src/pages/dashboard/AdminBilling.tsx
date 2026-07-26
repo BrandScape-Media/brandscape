@@ -18,7 +18,7 @@ import { timeAgo } from '../../lib/format'
  * ledger instead of being an undocumented SQL edit.
  */
 
-const TIERS = ['free', 'starter', 'professional', 'enterprise'] as const
+const TIERS = ['free', 'solo', 'starter', 'professional', 'enterprise'] as const
 
 const UNLIMITED = 999_999
 const fmt = (n: number) => (n >= UNLIMITED ? '∞' : n.toLocaleString())
@@ -115,8 +115,10 @@ export default function AdminBilling() {
           </button>
         </div>
         <p className="text-brand-600 text-[11px] font-body mb-3">
-          Creates the three tiers (monthly + yearly) and the credit packs in Stripe from the server&apos;s plan
-          definitions, and records their price IDs. Safe to re-run — it reuses anything that already exists.
+          Creates every sellable tier (monthly + yearly) and the credit packs in Stripe from the server&apos;s
+          plan definitions, and records their price IDs. Safe to re-run — it reuses anything that already
+          exists. Re-run after changing a price, and again after switching to the live key: the live
+          catalogue is separate.
           {provisioned !== null && (
             <span className="text-green-400"> {provisioned} prices in sync{liveMode === false ? ' (test mode)' : liveMode ? ' (LIVE)' : ''}.</span>
           )}

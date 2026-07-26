@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Nothing behind these is crawlable anyway — they need a session, and the SPA
+# renders them client-side — but keeping them out of the index stops empty
+# shells competing with the real pages.
+Disallow: /dashboard
+Disallow: /auth/
+Disallow: /invite/
+Disallow: /share/
+
+Sitemap: https://brandscape.media/sitemap.xml

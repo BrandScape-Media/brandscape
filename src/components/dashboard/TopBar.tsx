@@ -164,6 +164,23 @@ export default function TopBar({
         </kbd>
       </button>
 
+      {/* A failed charge outranks everything else here. Stripe keeps retrying
+          and access survives on past_due, so without a signal the first thing
+          the agency notices is losing the product weeks later. Free from the
+          agency row we already load — no extra request. */}
+      {agency?.payment_failed_at && (
+        <Link
+          to="/dashboard/billing"
+          title="Your last payment failed — update your card"
+          className="flex items-center gap-2 px-2.5 py-1.5 border border-red-500/30 bg-red-500/10 rounded-lg hover:border-red-500/60 transition-colors flex-shrink-0"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+          <span className="text-red-300 text-[11px] font-heading font-bold tracking-wider">
+            PAYMENT FAILED
+          </span>
+        </Link>
+      )}
+
       {/* What's running — hidden entirely at zero, since "0 running" is noise */}
       {running > 0 && (
         <Link

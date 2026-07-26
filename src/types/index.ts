@@ -21,6 +21,8 @@ export interface Agency {
   has_trialed?: boolean
   subscription_status?: string | null
   subscription_period_end?: string | null
+  /** set by the invoice.payment_failed webhook, cleared by invoice.paid */
+  payment_failed_at?: string | null
   usage_generations: number
   usage_revisions: number
   usage_regenerations: number
@@ -32,6 +34,45 @@ export interface Agency {
   billing_cycle_start?: string | null
   created_at: string
 }
+
+// ===== Team =====
+
+export interface AgencyMember {
+  id: string
+  email: string
+  name: string
+  avatar_url?: string | null
+  role: 'owner' | 'admin' | 'member'
+  created_at: string
+}
+
+/** A pending invite. The token is write-once and deliberately absent here. */
+export interface AgencyInvite {
+  id: string
+  email: string
+  role: 'admin' | 'member'
+  expires_at: string
+  created_at: string
+}
+
+export type InvitePeek =
+  | { ok: true; agency_name: string; email: string; role: 'admin' | 'member' }
+  | { ok: false; error: 'not_found' | 'already_accepted' | 'expired' }
+
+export type InviteAccept =
+  | { ok: true; agency_id: string }
+  | {
+      ok: false
+      error:
+        | 'not_signed_in'
+        | 'not_found'
+        | 'already_accepted'
+        | 'expired'
+        | 'no_profile'
+        | 'wrong_account'
+        | 'already_in_agency'
+      email?: string
+    }
 
 // ===== Usage / credits =====
 
@@ -82,7 +123,7 @@ export interface CreditLedgerEntry {
  * starts and after a subscription lapses. It has no Stripe price, so it is
  * deliberately absent from the `plans` array the pricing page renders.
  */
-export type PlanTier = 'free' | 'starter' | 'professional' | 'enterprise'
+export type PlanTier = 'free' | 'solo' | 'starter' | 'professional' | 'enterprise'
 
 export interface PlanFeature {
   label: string
@@ -126,7 +167,7 @@ export interface Promotion {
   cta_label?: string | null
   cta_target: 'upgrade' | 'credits' | 'url'
   cta_url?: string | null
-  audience: 'all' | 'trialing' | 'free' | 'starter' | 'professional' | 'low_credits' | 'out_of_credits'
+  audience: 'all' | 'trialing' | 'free' | 'solo' | 'starter' | 'professional' | 'low_credits' | 'out_of_credits'
   placement: 'dashboard' | 'pricing' | 'both'
   stripe_promotion_code?: string | null
   discount_label?: string | null

@@ -327,6 +327,10 @@ export interface BillingConfig {
   trial_days?: number
   /** tiers a trial may start on — entry tier only, so the top tiers can't be farmed */
   trial_tiers?: PlanTier[]
+  /** last failed charge, while Stripe is still retrying it */
+  payment_failed_at?: string | null
+  /** Stripe-hosted pay page for that invoice */
+  payment_invoice_url?: string | null
   packs: { id: string; credits: number; priceUsd: number }[]
   tiers: { tier: string; interval: 'month' | 'year'; priceUsd: number }[]
 }

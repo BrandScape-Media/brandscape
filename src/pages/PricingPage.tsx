@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { startCheckout, getPublicOffers, ApiError } from '../lib/orchestrator'
+import { track } from '../lib/analytics'
 import {
   plans,
   creditPacks,
@@ -51,6 +52,9 @@ export default function PricingPage() {
    */
   const choose = async (tier: PlanTier) => {
     const interval = yearly ? 'year' : 'month'
+    // The money step of the funnel, fired before either branch so a
+    // logged-out click still counts as intent rather than vanishing.
+    track('checkout_started', { tier, interval, signed_in: canCheckout })
     if (!canCheckout) {
       navigate(`/signup?plan=${tier}&interval=${interval}`)
       return
@@ -146,7 +150,7 @@ export default function PricingPage() {
           {/* Plans Grid with Glow */}
           <div className="relative">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-white/[0.03] rounded-full blur-[200px] pointer-events-none" />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto items-start relative z-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 max-w-6xl mx-auto items-start relative z-10">
               {plans.map((plan) => (
                 <PlanCard
                   key={plan.tier}
@@ -166,7 +170,7 @@ export default function PricingPage() {
             <div className="inline-flex flex-wrap justify-center items-center gap-x-3 gap-y-1 px-6 py-4 border border-white/5 rounded-xl bg-brand-900/20">
               <span className="text-brand-400 text-sm font-body">
                 7-day trial on Starter &middot; card required, charged when the trial ends &middot; cancel any time
-                before then and you pay nothing &middot; Professional and Enterprise start billing immediately
+                before then and you pay nothing &middot; Solo, Professional and Enterprise start billing immediately
               </span>
             </div>
           </div>
@@ -292,7 +296,7 @@ export default function PricingPage() {
             <div className="space-y-3">
               <FaqItem
                 question="How does the trial work?"
-                answer="Seven days on Starter, with full access to the pipeline. We take card details up front and charge nothing until day seven — cancel before then, in two clicks from your billing page, and you're not billed at all. One trial per agency. Professional and Enterprise don't have a trial: they carry a month's generation allowance, so they start billing on day one. You can upgrade from a trial whenever you're ready, which ends the trial and starts your billing there and then."
+                answer="Seven days on Starter, with full access to the pipeline. We take card details up front and charge nothing until day seven — cancel before then, in two clicks from your billing page, and you're not billed at all. One trial per agency. The other tiers start billing on day one: Solo is cheap enough to be its own trial, and Professional and Enterprise hand over a month's generation allowance up front. You can upgrade from a trial whenever you're ready, which ends the trial and starts your billing there and then."
               />
               <FaqItem
                 question="What happens if I run out of credits?"

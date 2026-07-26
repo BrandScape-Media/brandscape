@@ -40,6 +40,7 @@ export const navGroups: NavGroup[] = [
     id: 'account',
     label: 'Account',
     items: [
+      { to: '/dashboard/team', label: 'Team', icon: 'users' },
       { to: '/dashboard/billing', label: 'Billing', icon: 'billing' },
       { to: '/dashboard/settings', label: 'Settings', icon: 'settings' },
     ],

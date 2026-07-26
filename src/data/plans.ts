@@ -34,6 +34,30 @@ export const freePlan: Plan = {
 
 export const plans: Plan[] = [
   {
+    tier: 'solo',
+    name: 'Solo',
+    priceMonthly: 99,
+    priceYearly: 962,
+    description: 'One client, one finished campaign a month. The whole pipeline, at small scale.',
+    revisionsIncluded: 3,
+    projectsIncluded: 1,
+    generationsPerMonth: 15,
+    regenerationsPerMonth: 40,
+    creditsPerMonth: 150,
+    deliverableProjects: 1,
+    storageGb: 5,
+    prioritySupport: false,
+    customWorkflows: false,
+    features: [
+      { label: 'Final deliverables for 1 project', included: true },
+      { label: '3 AI revisions per stage', included: true },
+      { label: '5 GB asset storage', included: true },
+      { label: 'Priority support', included: false },
+      { label: 'Custom workflow design', included: false },
+      { label: 'Dedicated GPU capacity', included: false },
+    ],
+  },
+  {
     tier: 'starter',
     name: 'Starter',
     priceMonthly: 299,
@@ -150,9 +174,9 @@ export function planFor(tier: PlanTier | undefined | null): Plan {
  * fallback and the pricing-page source.
  */
 export const creditPacks: CreditPack[] = [
-  { id: 'small', credits: 250, priceUsd: 49 },
-  { id: 'medium', credits: 600, priceUsd: 99 },
-  { id: 'large', credits: 1500, priceUsd: 199 },
+  { id: 'small', credits: 250, priceUsd: 69 },
+  { id: 'medium', credits: 600, priceUsd: 149 },
+  { id: 'large', credits: 1500, priceUsd: 329 },
 ]
 
 /**

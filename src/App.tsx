@@ -2,10 +2,14 @@ import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Navbar from './components/Navbar'
+import RouteEffects from './components/RouteEffects'
 import HomePage from './pages/HomePage'
 import PricingPage from './pages/PricingPage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
+import InvitePage from './pages/InvitePage'
 import DashboardLayout from './pages/DashboardLayout'
 import AuthCallback from './pages/AuthCallback'
 import SharePage from './pages/SharePage'
@@ -17,6 +21,7 @@ import ClientsPage from './pages/dashboard/ClientsPage'
 import LibraryPage from './pages/dashboard/LibraryPage'
 import BillingPage from './pages/dashboard/BillingPage'
 import SettingsPage from './pages/dashboard/SettingsPage'
+import TeamPage from './pages/dashboard/TeamPage'
 import AdminPage from './pages/dashboard/AdminPage'
 
 /**
@@ -63,6 +68,7 @@ function AppRouter() {
   return (
     <BrowserRouter>
       <ScrollManager />
+      <RouteEffects />
       <div className="min-h-screen bg-brand-black text-brand-white">
         <Routes>
           {/* Public routes */}
@@ -70,6 +76,11 @@ function AppRouter() {
           <Route path="/pricing" element={<><Navbar /><PricingPage /></>} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          {/* deliberately outside /dashboard: the invitee has no agency yet */}
+          <Route path="/invite/:token" element={<InvitePage />} />
+          {/* where the emailed recovery link lands */}
+          <Route path="/auth/reset" element={<ResetPasswordPage />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           {/* /privacy and /terms are static files in public/ (served with
               a real 200 by GitHub Pages, unlike SPA routes) */}
@@ -92,6 +103,7 @@ function AppRouter() {
             <Route path="projects/:id" element={<ProjectDetailPage />} />
             <Route path="clients" element={<ClientsPage />} />
             <Route path="library" element={<LibraryPage />} />
+            <Route path="team" element={<TeamPage />} />
             <Route path="billing" element={<BillingPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="admin" element={<AdminPage />} />

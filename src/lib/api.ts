@@ -2,6 +2,8 @@ import { getSupabase } from './supabase/client'
 import { presignAssetUpload, getAssetViewUrls, deleteAssetObject } from './orchestrator'
 import type {
   Agency,
+  AgencyInvite,
+  AgencyMember,
   Client,
   ClientAsset,
   ClientAssetKind,
@@ -12,6 +14,8 @@ import type {
   MediaComment,
   Project,
   ProjectStage,
+  InviteAccept,
+  InvitePeek,
   ShareComment,
   ShareLink,
   SharedGallery,
@@ -64,6 +68,63 @@ export async function createAgency(name: string, industry?: string): Promise<str
 export async function updateAgency(agencyId: string, patch: { name?: string; industry?: string }): Promise<void> {
   const { error } = await getSupabase().from('agencies').update(patch).eq('id', agencyId)
   if (error) throw error
+}
+
+// ===== Team =====
+//
+// Multi-user agencies were always supported by the schema — every RLS policy
+// keys off current_agency_id(), not a user id — but there was no way to join
+// one. These wrap the migration 023 RPCs. All of them are SECURITY DEFINER
+// because a member may not write their own agency_id or role.
+
+/** Teammates. The profiles select policy already allows same-agency reads. */
+export async function listAgencyMembers(agencyId: string): Promise<AgencyMember[]> {
+  const { data, error } = await getSupabase()
+    .from('profiles')
+    .select('id, email, name, avatar_url, role, created_at')
+    .eq('agency_id', agencyId)
+    .order('created_at', { ascending: true })
+  if (error) throw error
+  return (data ?? []) as AgencyMember[]
+}
+
+/** Returns the token. It is shown once and never readable again. */
+export async function createAgencyInvite(email: string, role: 'admin' | 'member'): Promise<string> {
+  const { data, error } = await getSupabase().rpc('create_agency_invite', {
+    p_email: email,
+    p_role: role,
+  })
+  if (error) throw error
+  return data as string
+}
+
+export async function listAgencyInvites(): Promise<AgencyInvite[]> {
+  const { data, error } = await getSupabase().rpc('list_agency_invites')
+  if (error) throw error
+  return (data ?? []) as AgencyInvite[]
+}
+
+export async function revokeAgencyInvite(id: string): Promise<void> {
+  const { error } = await getSupabase().rpc('revoke_agency_invite', { p_id: id })
+  if (error) throw error
+}
+
+export async function removeAgencyMember(userId: string): Promise<void> {
+  const { error } = await getSupabase().rpc('remove_agency_member', { p_user_id: userId })
+  if (error) throw error
+}
+
+/** Name the agency before asking someone to join it. */
+export async function peekAgencyInvite(token: string): Promise<InvitePeek> {
+  const { data, error } = await getSupabase().rpc('peek_agency_invite', { p_token: token })
+  if (error) throw error
+  return data as InvitePeek
+}
+
+export async function acceptAgencyInvite(token: string): Promise<InviteAccept> {
+  const { data, error } = await getSupabase().rpc('accept_agency_invite', { p_token: token })
+  if (error) throw error
+  return data as InviteAccept
 }
 
 // ===== Clients =====

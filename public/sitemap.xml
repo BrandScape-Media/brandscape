@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Only URLs that actually return HTTP 200.
+
+  This is a client-rendered SPA on GitHub Pages: every route except `/` is
+  served by 404.html, which returns a genuine 404 status before the redirect
+  script runs. /pricing is therefore NOT listed — verified 404 on 2026-07-26 —
+  because a sitemap entry that 404s gets dropped and devalues the rest of the
+  file. The legal pages are here because they are real static files under
+  public/, which is exactly why they were made static.
+
+  To get /pricing indexable, the site needs prerendering at build time, or a
+  host that serves the SPA fallback with a 200 (Cloudflare Pages, Netlify).
+  Until then the landing page has to carry the pricing keywords itself.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://brandscape.media/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://brandscape.media/terms/</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://brandscape.media/privacy/</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>

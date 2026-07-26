@@ -77,9 +77,26 @@ One credit ≈ **$0.04** of render cost. A full six-script project shoot
 | Tier | Credits | ≈ full shoots | Deliverable projects |
 |---|---|---|---|
 | Free ($0) | 0 | 0 | 0 of 1 |
+| Solo ($99) | 150 | 1 | 1 of 1 |
 | Starter ($299) | 600 | 4 | 1 of 3 |
 | Professional ($799) | 3,000 | 20 | all 15 |
 | Enterprise ($1,999) | 12,000 | 80 | unlimited |
+
+### Why Solo exists
+
+Checked against the market on 2026-07-26: Pencil starts at $14, Creatify $19,
+HeyGen $29, AdCreative $39, Arcads $110. Our cheapest tier was $299 — roughly
+where Creatify's *agency* plan sits ($597 top tier). We had the most expensive
+entry point in the category and no way at all for an agency to see the pipeline
+produce something without committing to it.
+
+Solo is one project, one finished campaign, and exactly one full shoot's worth
+of credits. Its effective rate is **$0.66/credit — deliberately worse than
+Starter's $0.498**, because a smaller plan should have a worse unit rate or the
+ladder points downhill.
+
+The anchors were left alone on purpose. Discounting Starter would teach the
+market the price isn't real, and the margin was never the problem — reach was.
 
 ### The `free` tier
 
@@ -103,14 +120,22 @@ they have. Move real free-riders by hand in Mission Control.
 
 | Pack | Price | Per credit |
 |---|---|---|
-| 250 | $49 | $0.196 |
-| 600 | $99 | $0.165 |
-| 1,500 | $199 | $0.133 |
+| 250 | $69 | $0.276 |
+| 600 | $149 | $0.248 |
+| 1,500 | $329 | $0.219 |
 
-Sold at roughly 4–5x render cost — normal for managed AI infrastructure once
-support, storage, orchestration and failed renders are absorbed. Bigger packs
-are cheaper per credit to pull agencies upward. Purchased credits roll over;
-the monthly allowance does not.
+**Overage has to cost more than upgrading, or it isn't overage.** The packs
+used to be $49/$99/$199 — $0.196/$0.165/$0.133 per credit — which undercut
+every plan they topped up, including Enterprise at $0.167. The rational Starter
+customer bought packs forever and never upgraded; only the deliverables gate
+was doing any upsell work at all.
+
+The binding number is the **marginal upgrade rate**: Starter → Professional is
+$500 for 2,400 more credits, or $0.208/credit. Every pack now sits above that,
+so buying up is always the cheaper way to get volume. Bigger packs still get a
+better rate, and all three remain 5.5–6.9× render cost — normal for managed AI
+infrastructure once support, storage, orchestration and failed renders are
+absorbed. Purchased credits roll over; the monthly allowance does not.
 
 **Spend order:** monthly allowance first, then purchased balance, so bought
 credits are never burned while the plan still has room.
@@ -185,6 +210,27 @@ every entitlement waits for a signed event.
 | `checkout.session.completed` (mode=payment) | `grant_credits()` for the pack's credits |
 | `customer.subscription.created/updated` | sets `agencies.plan` from the price's tier; `active`/`trialing`/`past_due` keep the tier, anything else drops to `free` |
 | `customer.subscription.deleted` | back to `free` |
+| `invoice.payment_failed` | records `payment_failed_at` + the hosted invoice URL |
+| `invoice.paid` | clears both |
+
+### Failed payments
+
+The lifecycle always *ended* safely — `past_due` keeps the tier while Stripe
+retries, `unpaid` and `canceled` fall outside the entitled list and drop to
+`free`. What was missing was the middle: a customer whose card expired got no
+signal at all until access disappeared weeks later.
+
+`invoice.payment_failed` now records the failure and Stripe's **hosted invoice
+URL**, which is a payment page we don't have to build and that never puts card
+details near us. Both the billing banner and a red pill in the dashboard top
+bar key off it — the top bar matters because a past-due agency keeps working
+normally and would otherwise never open the billing page. `invoice.paid` clears
+it, including for a payment made from that hosted page, which produces no
+subscription event of its own.
+
+**Check the Stripe Dashboard setting.** Retries must end in *cancel* or *mark
+unpaid*. If it is left on "leave past_due", a failed card keeps the plan
+forever and none of the above ever fires the drop to `free`.
 
 Every event id is recorded in `stripe_events` before handling, so Stripe's
 retries are exactly-once — without it a redelivered checkout would grant the
@@ -261,6 +307,19 @@ When a trial or subscription ends unpaid, the agency drops to **`free`**, not
 `starter`. That distinction is the whole point: dropping to `starter` was the
 free-forever hole.
 
+**Known and deliberately unfixed: the month-boundary double allowance.**
+Counters reset on the 1st (`date_trunc('month', current_date)` in
+`consume_credits`), not on the billing anniversary. A 7-day trial that straddles
+the 1st therefore hands over 1,200 credits instead of 600. That is roughly a
+7-in-30 chance of about $24 extra render cost, so **~$5.50 expected per trial** —
+cheaper than the engineering to move the cycle onto the subscription period, and
+far cheaper than the bugs that change would introduce. Revisit if trial volume
+gets into the hundreds per month.
+
+The same mismatch means the billing page shows two different dates — "renews"
+(the Stripe anniversary) and "allowance resets" (the 1st). Both are correct;
+`daysToReset()` in `UsageMeters.tsx` matches the SQL exactly.
+
 ## Offers
 
 Stripe owns the discount **maths** (coupons + promotion codes). The
@@ -291,24 +350,30 @@ from `subscription_period_end`, deliberately separate from marketing offers.
 
 ## Where the tiers sit in the market (checked 2026-07-25)
 
+Re-checked 2026-07-26.
+
 | Product | Entry | Top public tier |
 |---|---|---|
 | Pencil | $14/mo | $55/mo, then custom |
-| Creatify | $39/mo | ~$49/mo |
-| AdCreative.ai | $39/mo | $599/mo |
+| Creatify | $19–39/mo | $597/mo (agency) |
 | HeyGen | ~$29/mo | ~$220/mo |
-| Arcads | ~$110/mo | $500+/mo (~$11/video) |
-| **Brandscape** | **$299/mo** | **$1,999/mo** |
+| AdCreative.ai | $39/mo | $249/mo (Professional) |
+| Arcads | ~$110/mo (10 videos) | $410/mo (Pro) |
+| **Brandscape** | **$99/mo** | **$1,999/mo** |
 
-Brandscape is the most expensive entry point in the category. That is
+The finding that produced the Solo tier: **our entry tier was priced like
+everyone else's agency tier.** Creatify tops out at $597; we started at $299.
+
+Brandscape is still the most expensive *ceiling* in the category, which is
 defensible **only because the page sells the pipeline** — those products are
-point tools that render a clip from a script you supply, whereas this runs
-the seven stages around it. The pricing page therefore leads with the stages,
-not a feature list.
+point tools that render a clip from a script you supply, whereas this runs the
+seven stages around it. The pricing page therefore leads with the stages, not a
+feature list.
 
-Watch the entry price after launch. If trial starts are weak, the fix is a
-cheaper rung *below* Starter, not discounting Starter — discounting the
-anchor tier teaches the market the price isn't real.
+Watch the Solo → Starter upgrade rate after launch. If Solo grows the funnel
+and people move up, it works. If everyone parks on Solo permanently, tighten
+its project limit rather than raising its price. If *trial starts* are weak, the
+problem is reach or positioning, and no pricing lever fixes it.
 
 ## Recipe: changing a tier after market research
 
@@ -324,12 +389,31 @@ Example — make Professional $899 with 20 projects and 400 generations:
 
 ## Recipe: adding a whole new tier (e.g. "Scale")
 
-1. DB: the `plan` column allows `starter/professional/enterprise` via a CHECK
-   constraint — add the new value in a migration:
+Migration `021_solo_tier.sql` is a worked example of all of this. Five places,
+not two — this is the list that catches people out:
+
+1. **DB CHECK constraints**, in a migration:
    ```sql
    alter table public.agencies drop constraint agencies_plan_check;
    alter table public.agencies add constraint agencies_plan_check
-     check (plan in ('starter','professional','scale','enterprise'));
+     check (plan in ('free','solo','starter','scale','professional','enterprise'));
    ```
-2. Add the tier object to both plans files (same shape as the others) and
-   add the tier name to `PlanTier` in `src/types/index.ts`.
+   …and `promotions_audience_check` too, or Mission Control can never aim an
+   offer at the new tier.
+2. **`deliverable_project_limit()`** in the same migration. Note that
+   `create or replace function` **resets the function's SET clauses**, so it
+   must re-declare `set search_path = public` or it silently undoes the 004
+   advisor-hardening pass.
+3. **Server `src/lib/plans.js`** — `PLAN_LIMITS` and `SELLABLE_TIERS`.
+4. **Server `src/routes/billing.js`** — `TIER_PRICES_USD` and `TIER_NAMES`.
+   Easy to miss; provisioning silently skips a tier with no price entry.
+5. **Frontend** — `plans` in `src/data/plans.ts`, `PlanTier` in
+   `src/types/index.ts`, plus `TIERS` in `AdminBilling.tsx` and the audience
+   lists in `AdminOffers.tsx` / `src/types/index.ts`.
+
+Then re-run **Provision in Stripe** in Mission Control, in each mode you use.
+
+> `profiles.plan` appears in migration 001 with its own CHECK, but **it does
+> not exist in production** — the early migrations were applied by other means
+> and the file has drifted. `agencies.plan` is the only tier column the app
+> reads or writes. Don't write a migration that touches the other one.

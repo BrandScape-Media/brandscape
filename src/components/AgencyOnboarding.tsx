@@ -1,6 +1,9 @@
 import { useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { createAgency } from '../lib/api'
+import { takeInviteToken } from '../lib/inviteIntent'
+import { track } from '../lib/analytics'
 
 const INDUSTRIES = [
   'Marketing & Advertising',
@@ -12,6 +15,11 @@ const INDUSTRIES = [
 
 export default function AgencyOnboarding() {
   const { user, refreshProfile, signOut } = useAuth()
+  // Someone who arrived via an invite link and then signed up lands here,
+  // because they still have no agency. Send them back to finish joining
+  // rather than making them create one they don't want. Read once (it clears)
+  // so a rejected invite doesn't ping-pong between the two screens.
+  const [invite] = useState(() => takeInviteToken())
   const [name, setName] = useState('')
   const [industry, setIndustry] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -24,12 +32,17 @@ export default function AgencyOnboarding() {
     setError(null)
     try {
       await createAgency(name, industry || undefined)
+      // Activation: an account without an agency can't do anything, so this
+      // rather than signup is the step worth measuring.
+      track('agency_created', { industry: industry || null })
       await refreshProfile()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create your agency. Please try again.')
       setSubmitting(false)
     }
   }
+
+  if (invite) return <Navigate to={`/invite/${invite}`} replace />
 
   return (
     <div className="min-h-screen bg-brand-black flex items-center justify-center p-6">
@@ -85,8 +98,9 @@ export default function AgencyOnboarding() {
             </button>
           </form>
 
-          <p className="text-brand-700 text-xs font-body mt-6 text-center">
-            Joining an existing agency? Ask its owner to invite you (team invites are coming soon).
+          <p className="text-brand-400 text-xs font-body mt-6 text-center">
+            Joining an existing agency? Ask an owner or admin to invite you from their Team page —
+            you&apos;ll get a link that drops you straight in.
           </p>
         </div>
 
