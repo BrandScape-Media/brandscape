@@ -354,7 +354,21 @@ export async function openBillingPortal(): Promise<string> {
   return (await res.json()).url
 }
 
-export async function adminProvisionBilling(): Promise<{ live_mode: boolean; prices: { lookup_key: string; price_id: string }[] }> {
+export interface RepricedPrice {
+  lookup_key: string
+  from_cents: number
+  to_cents: number
+  old_price_id: string
+  new_price_id: string
+}
+
+export async function adminProvisionBilling(): Promise<{
+  live_mode: boolean
+  prices: { lookup_key: string; price_id: string }[]
+  /** Stripe prices are immutable, so a changed amount mints a new one and
+   *  archives the old. Worth showing — it is a real money change. */
+  repriced?: RepricedPrice[]
+}> {
   const res = await orThrow(await post('/v1/admin/billing/provision'))
   return res.json()
 }

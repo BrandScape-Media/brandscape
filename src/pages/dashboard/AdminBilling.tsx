@@ -8,6 +8,7 @@ import {
   adminProvisionBilling,
   type AdminAgency,
   type CreditLedgerEntry,
+  type RepricedPrice,
 } from '../../lib/orchestrator'
 import { creditPacks } from '../../data/plans'
 import { timeAgo } from '../../lib/format'
@@ -33,6 +34,7 @@ export default function AdminBilling() {
   const [grantFor, setGrantFor] = useState<string | null>(null)
   const [grantAmount, setGrantAmount] = useState('')
   const [provisioned, setProvisioned] = useState<number | null>(null)
+  const [repriced, setRepriced] = useState<RepricedPrice[]>([])
   const [liveMode, setLiveMode] = useState<boolean | null>(null)
 
   const load = useCallback(async () => {
@@ -107,6 +109,7 @@ export default function AdminBilling() {
               const res = await adminProvisionBilling()
               setProvisioned(res.prices.length)
               setLiveMode(res.live_mode)
+              setRepriced(res.repriced ?? [])
             }, 'Stripe products and prices are in sync.')}
             disabled={busy === 'provision'}
             className="px-3 py-1.5 border border-white/10 text-brand-300 hover:text-white hover:border-white/25 font-heading text-[11px] rounded-lg transition-all disabled:opacity-40"
@@ -123,6 +126,29 @@ export default function AdminBilling() {
             <span className="text-green-400"> {provisioned} prices in sync{liveMode === false ? ' (test mode)' : liveMode ? ' (LIVE)' : ''}.</span>
           )}
         </p>
+
+        {/* A re-price is a real money change and used to happen invisibly —
+            Stripe prices are immutable, so the old amount kept billing while
+            our table claimed the new one. Say it out loud. */}
+        {repriced.length > 0 && (
+          <div className="mb-3 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2.5">
+            <p className="text-amber-300 text-[11px] font-heading font-bold tracking-wider mb-1.5">
+              {repriced.length} PRICE{repriced.length === 1 ? '' : 'S'} CHANGED
+            </p>
+            <ul className="space-y-0.5">
+              {repriced.map((r) => (
+                <li key={r.lookup_key} className="text-brand-300 text-[11px] font-body">
+                  <span className="text-white">{r.lookup_key}</span>{' '}
+                  ${(r.from_cents / 100).toLocaleString()} → ${(r.to_cents / 100).toLocaleString()}
+                </li>
+              ))}
+            </ul>
+            <p className="text-brand-400 text-[10px] font-body mt-1.5">
+              New Stripe prices were created and the old ones archived. Anyone already subscribed
+              stays on the price they signed up at.
+            </p>
+          </div>
+        )}
         <div className="flex flex-wrap gap-2">
           {creditPacks.map((p) => (
             <span key={p.id} className="px-3 py-1.5 rounded-lg bg-brand-900/50 border border-white/10 text-brand-300 text-[11px] font-body">

@@ -190,6 +190,28 @@ Stripe's sandbox; `sk_live_…` moves real money. `/health` reports
    three tiers (monthly + yearly) and the three credit packs from
    `src/lib/plans.js`, and records their price IDs in `billing_prices`.
    Idempotent — re-running reuses anything that already exists.
+### Changing a price after it exists (the immutability trap)
+
+**Stripe prices cannot be edited.** `unit_amount` is immutable, so "change the
+number in plans.js and re-provision" does not do what it looks like.
+
+Provisioning used to match on `lookup_key` alone: it found the existing $49
+pack, reused it, and then wrote the new $69 into `billing_prices` anyway. The
+result was a catalogue that **advertised $69 and charged $49** — caught on
+2026-07-26 only because the numbers were read back out of both systems.
+
+`ensure()` now compares `unit_amount` and, when it differs, creates a new price
+with `transfer_lookup_key: true` (moving the key off the old one — without that
+flag Stripe rejects the duplicate and the re-price silently no-ops), archives
+the old price, and marks its `billing_prices` row inactive. Mission Control
+prints an amber "N prices changed — $X → $Y" summary, because a price change is
+a money change and should never be silent.
+
+**Archiving does not affect existing subscriptions.** Anyone already billing on
+the old price stays there — grandfathered, which is normally what you want.
+Moving them costs a subscription update per customer and is a deliberate,
+separate decision.
+
 3. Stripe Dashboard → Developers → Webhooks → add endpoint
    `https://api.brandscape.media/v1/billing/webhook`, subscribe to
    `checkout.session.completed`, `customer.subscription.created`,
