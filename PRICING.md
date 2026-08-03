@@ -213,10 +213,17 @@ Moving them costs a subscription update per customer and is a deliberate,
 separate decision.
 
 3. Stripe Dashboard → Developers → Webhooks → add endpoint
-   `https://api.brandscape.media/v1/billing/webhook`, subscribe to
-   `checkout.session.completed`, `customer.subscription.created`,
-   `customer.subscription.updated`, `customer.subscription.deleted`.
+   `https://api.brandscape.media/v1/billing/webhook`, subscribe to **all six**
+   events the handler implements — `checkout.session.completed`,
+   `customer.subscription.created`, `customer.subscription.updated`,
+   `customer.subscription.deleted`, `invoice.payment_failed`, `invoice.paid`.
    Copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
+
+   Subscribing to only the first four is the easy mistake — it is what this
+   step used to say. Everything appears to work, because plans and credits are
+   granted by the other four; what silently goes missing is the entire
+   failed-payment path below, so an expired card produces no banner, no top-bar
+   pill, and no drop to `free`.
 4. Test with card `4242 4242 4242 4242`, then swap both values for the live
    key + live webhook secret and run **Provision in Stripe** again (the live
    catalogue is separate; rows are scoped by `livemode`).
