@@ -205,7 +205,7 @@ export default function SettingsPage() {
         <h2 className="font-heading font-bold text-lg mb-2 text-red-400">Danger Zone</h2>
         <p className="text-brand-500 text-sm font-body mb-4">
           Account deletion is permanent and removes your agency&apos;s data. Contact{' '}
-          <a href="mailto:support@brandscape.media" className="underline hover:text-brand-300 transition-colors">support@brandscape.media</a>{' '}
+          <a href="mailto:connect@brandscape.media" className="underline hover:text-brand-300 transition-colors">connect@brandscape.media</a>{' '}
           to delete your account.
         </p>
       </div>

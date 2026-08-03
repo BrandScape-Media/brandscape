@@ -46,7 +46,7 @@ export default function Footer() {
             </h4>
             <ul className="space-y-3">
               <li><Link to="/" className="text-brand-500 hover:text-white text-sm transition-colors">About</Link></li>
-              <li><a href="mailto:hello@brandscape.media" className="text-brand-500 hover:text-white text-sm transition-colors">Contact</a></li>
+              <li><a href="mailto:connect@brandscape.media" className="text-brand-500 hover:text-white text-sm transition-colors">Contact</a></li>
               <li><a href="/privacy/" className="text-brand-500 hover:text-white text-sm transition-colors">Privacy Policy</a></li>
               <li><a href="/terms/" className="text-brand-500 hover:text-white text-sm transition-colors">Terms of Service</a></li>
             </ul>

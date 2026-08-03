@@ -24,7 +24,7 @@ export function getSupabase(): SupabaseClient {
   if (!_supabase) {
     if (!isSupabaseConfigured()) {
       throw new Error(
-        'Authentication is not configured on this deployment yet. Use demo mode, or contact support@brandscape.media.',
+        'Authentication is not configured on this deployment yet. Use demo mode, or contact connect@brandscape.media.',
       )
     }
     _supabase = createClient(supabaseUrl!, supabaseAnonKey!, {
