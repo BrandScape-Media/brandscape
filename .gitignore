@@ -15,3 +15,8 @@ src/assets/Influencer-library/
 
 # Claude session context - local only, never publish (public repo)
 CLAUDE.md
+
+# Business strategy: COGS, margins, target customers, outreach tactics.
+# PRICING.md and LAUNCH.md were committed before this rule existed and are
+# already public — see STRATEGY.md §9.
+STRATEGY.md

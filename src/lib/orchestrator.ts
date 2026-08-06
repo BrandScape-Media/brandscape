@@ -25,6 +25,15 @@ async function post(path: string, body?: unknown): Promise<Response> {
   })
 }
 
+async function put(path: string, body: unknown): Promise<Response> {
+  const headers = await authHeader()
+  return fetch(`${API_URL}${path}`, {
+    method: 'PUT',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+
 async function patch(path: string, body: unknown): Promise<Response> {
   const headers = await authHeader()
   return fetch(`${API_URL}${path}`, {
@@ -771,4 +780,35 @@ export interface BenchRun {
 export async function adminComfyGetRun(runId: string): Promise<BenchRun> {
   const res = await orThrow(await get(`/v1/admin/comfy/run/${runId}`))
   return (await res.json()).run
+}
+
+// ===== Render backends (which machine runs a generation, and in what order) =====
+
+export type RenderBackend = 'runpod' | 'local'
+
+export interface RenderSettings {
+  chains: { image: RenderBackend[]; video: RenderBackend[] }
+  /** What the environment alone implies — shown when the stored chain matches it. */
+  env_default: RenderBackend[]
+  backends: RenderBackend[]
+  comfy: {
+    configured: boolean
+    reachable: boolean
+    driver: string
+    error?: string
+    workers?: { ready: number; running: number; idle: number; initializing: number; unhealthy: number }
+    gpu?: { name: string; vram_total: number | null; vram_free: number | null } | null
+  }
+}
+
+export async function adminGetRenderSettings(): Promise<RenderSettings> {
+  const res = await orThrow(await get('/v1/admin/settings/render'))
+  return await res.json()
+}
+
+export async function adminSetRenderChains(
+  chains: Partial<{ image: RenderBackend[]; video: RenderBackend[] }>,
+): Promise<RenderSettings['chains']> {
+  const res = await orThrow(await put('/v1/admin/settings/render', chains))
+  return (await res.json()).chains
 }

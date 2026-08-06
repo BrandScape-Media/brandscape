@@ -20,6 +20,7 @@ import AdminInfluencers from './AdminInfluencers'
 import AdminMediaLab from './AdminMediaLab'
 import AdminBilling from './AdminBilling'
 import AdminOffers from './AdminOffers'
+import AdminRenderSettings from './AdminRenderSettings'
 
 /**
  * Platform-admin mission control (Brandscape staff only): human QC across
@@ -39,7 +40,9 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default function AdminPage() {
   const { user } = useAuth()
-  const [tab, setTab] = useState<'projects' | 'influencers' | 'medialab' | 'billing' | 'offers' | 'playground'>('projects')
+  const [tab, setTab] = useState<
+    'projects' | 'influencers' | 'medialab' | 'render' | 'billing' | 'offers' | 'playground'
+  >('projects')
   const [projects, setProjects] = useState<AdminProjectSummary[] | null>(null)
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -107,6 +110,7 @@ export default function AdminPage() {
             { id: 'projects', label: 'Projects & QC' },
             { id: 'influencers', label: 'Influencers' },
             { id: 'medialab', label: 'Media Lab' },
+            { id: 'render', label: 'Render Backends' },
             { id: 'billing', label: 'Plans & Credits' },
             { id: 'offers', label: 'Offers' },
             { id: 'playground', label: 'AI Playground' },
@@ -145,6 +149,8 @@ export default function AdminPage() {
         <AdminBilling />
       ) : tab === 'offers' ? (
         <AdminOffers />
+      ) : tab === 'render' ? (
+        <AdminRenderSettings />
       ) : tab === 'medialab' ? (
         <AdminMediaLab />
       ) : tab === 'influencers' ? (
