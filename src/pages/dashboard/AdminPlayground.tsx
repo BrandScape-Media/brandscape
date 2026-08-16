@@ -523,6 +523,7 @@ function WorkflowBench({ comfyReady, healthLoaded }: { comfyReady: boolean; heal
                   className={benchInput}
                 >
                   <option value="">Configured chain</option>
+                  <option value="gemini">Google image API only</option>
                   <option value="runpod">GPU cloud only</option>
                   <option value="local">Local only</option>
                 </select>
@@ -610,7 +611,7 @@ function BenchOutput({ run, startedAt }: { run: BenchRun | null; startedAt: numb
             two backends can satisfy the same request. */}
         {run.backend && (
           <span className="text-brand-500 text-[10px] font-body">
-            on {run.backend === 'runpod' ? 'GPU cloud' : 'local'}
+            on {run.backend === 'runpod' ? 'GPU cloud' : run.backend === 'gemini' ? 'Google' : 'local'}
             {run.attempts && run.attempts.length > 1 && (
               <span className="text-amber-400/80"> (after {run.attempts.length - 1} fallback)</span>
             )}

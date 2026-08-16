@@ -16,21 +16,36 @@ import {
  */
 
 const BACKEND_LABEL: Record<RenderBackend, string> = {
+  gemini: 'Google image API',
   runpod: 'GPU cloud',
   local: 'Local workstation',
 }
 
 const BACKEND_NOTE: Record<RenderBackend, string> = {
-  runpod: 'Rented GPUs, scale to zero. Cold start ~8 min, then ~90s a render.',
+  gemini: 'Stills only. No GPU of ours, so no cold start and no capacity risk — seconds, not minutes.',
+  runpod: 'Rented GPUs, scale to zero. Cold start several minutes, then ~90s an image.',
   local: 'The studio workstation over its tunnel. Always warm, but only as up as that machine.',
 }
 
+type Preset = { id: string; chain: RenderBackend[]; label: string; hint: string }
+
 /** Every ordering worth offering, spelled out rather than drag-to-reorder. */
-const PRESETS: { id: string; chain: RenderBackend[]; label: string; hint: string }[] = [
+const VIDEO_PRESETS: Preset[] = [
   { id: 'runpod-local', chain: ['runpod', 'local'], label: 'GPU cloud, then local', hint: 'Normal running. Local catches what the cloud cannot place.' },
   { id: 'local-runpod', chain: ['local', 'runpod'], label: 'Local, then GPU cloud', hint: 'Cheapest. Ties uptime to the workstation being on.' },
   { id: 'runpod', chain: ['runpod'], label: 'GPU cloud only', hint: 'For debugging: renders fail here instead of quietly succeeding elsewhere.' },
   { id: 'local', chain: ['local'], label: 'Local only', hint: 'For debugging, or while the cloud endpoint is being rebuilt.' },
+]
+
+// Images lead with Google — it needs no GPU at all, so it sidesteps every
+// capacity and cold-start problem the video path has. Flux stays underneath as
+// the known-good reference for when a key expires or Google refuses a prompt.
+const IMAGE_PRESETS: Preset[] = [
+  { id: 'gemini-runpod-local', chain: ['gemini', 'runpod', 'local'], label: 'Google, then GPU cloud, then local', hint: 'Normal running. Fastest and cheapest first, two fallbacks behind it.' },
+  { id: 'gemini-local', chain: ['gemini', 'local'], label: 'Google, then local', hint: 'Skips the rented GPUs entirely for stills.' },
+  { id: 'gemini', chain: ['gemini'], label: 'Google only', hint: 'For debugging: image renders fail here instead of falling through to Flux.' },
+  { id: 'runpod-local', chain: ['runpod', 'local'], label: 'GPU cloud, then local (Flux)', hint: 'The old path. Use when comparing Google against Flux output.' },
+  { id: 'local', chain: ['local'], label: 'Local only (Flux)', hint: 'The reference box, for judging quality against.' },
 ]
 
 function idOf(chain: RenderBackend[]): string {
@@ -40,11 +55,13 @@ function idOf(chain: RenderBackend[]): string {
 function ChainPicker({
   title,
   chain,
+  presets,
   onPick,
   disabled,
 }: {
   title: string
   chain: RenderBackend[]
+  presets: Preset[]
   onPick: (chain: RenderBackend[]) => void
   disabled: boolean
 }) {
@@ -57,7 +74,7 @@ function ChainPicker({
         workflow fails everywhere and stops here.
       </p>
       <div className="space-y-2">
-        {PRESETS.map((p) => {
+        {presets.map((p) => {
           const active = current === p.id
           return (
             <button
@@ -184,12 +201,14 @@ export default function AdminRenderSettings() {
         <ChainPicker
           title="Video renders"
           chain={settings.chains.video}
+          presets={VIDEO_PRESETS}
           onPick={(c) => save('video', c)}
           disabled={saving}
         />
         <ChainPicker
           title="Image renders"
           chain={settings.chains.image}
+          presets={IMAGE_PRESETS}
           onPick={(c) => save('image', c)}
           disabled={saving}
         />

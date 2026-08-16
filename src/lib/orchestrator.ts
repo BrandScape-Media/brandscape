@@ -790,7 +790,7 @@ export async function adminComfyGetRun(runId: string): Promise<BenchRun> {
 
 // ===== Render backends (which machine runs a generation, and in what order) =====
 
-export type RenderBackend = 'runpod' | 'local'
+export type RenderBackend = 'gemini' | 'runpod' | 'local'
 
 export interface RenderSettings {
   chains: { image: RenderBackend[]; video: RenderBackend[] }
