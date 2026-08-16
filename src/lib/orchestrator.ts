@@ -64,7 +64,16 @@ async function orThrow(res: Response): Promise<Response> {
       if (data?.error) message = data.error
       if (data?.code) code = data.code
     } catch {
-      /* keep default */
+      // Not JSON. The API always answers errors as JSON, so a non-JSON body on
+      // a 5xx came from the platform in front of it — almost always a redeploy
+      // restarting the container. That is worth saying, because the bare
+      // "Request failed (500)" reads like a bug in the thing you just clicked
+      // and sent us hunting through render code for an outage that lasted 30
+      // seconds.
+      if (res.status >= 500) {
+        message = 'The server is restarting (a deploy is probably in progress) — wait a few seconds and try again.'
+        code = 'server_unavailable'
+      }
     }
     // branch on `code`, never on the wording of `message`
     throw new ApiError(message, res.status, code)
