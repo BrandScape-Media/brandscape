@@ -13,6 +13,7 @@ import {
   type TtsVoice,
   type MediaWorkflow,
   type BenchRun,
+  type RenderBackend,
 } from '../../lib/orchestrator'
 
 /**
@@ -406,6 +407,10 @@ function WorkflowBench({ comfyReady, healthLoaded }: { comfyReady: boolean; heal
   const [audio, setAudio] = useState<File | null>(null)
   const [prompt, setPrompt] = useState('')
   const [seed, setSeed] = useState('')
+  // '' = use the configured chain. A named backend pins this one run to that
+  // machine with no fallback, so a failure is visible instead of being quietly
+  // absorbed by the other backend.
+  const [backend, setBackend] = useState<'' | RenderBackend>('')
   const [duration, setDuration] = useState('')
   const [width, setWidth] = useState('')
   const [height, setHeight] = useState('')
@@ -450,6 +455,7 @@ function WorkflowBench({ comfyReady, healthLoaded }: { comfyReady: boolean; heal
         audio_key,
         ...(prompt.trim() ? { prompt: prompt.trim() } : {}),
         ...(seed.trim() ? { seed: Number(seed) } : {}),
+        ...(backend ? { backend } : {}),
         ...(meta.kind === 'video' && duration.trim() ? { duration_seconds: Number(duration) } : {}),
         ...(width.trim() ? { width: Number(width) } : {}),
         ...(height.trim() ? { height: Number(height) } : {}),
@@ -508,6 +514,18 @@ function WorkflowBench({ comfyReady, healthLoaded }: { comfyReady: boolean; heal
               <div>
                 <label className="block text-brand-500 text-[10px] font-heading tracking-wider uppercase mb-1.5">Seed</label>
                 <input value={seed} onChange={(e) => setSeed(e.target.value)} placeholder="random" inputMode="numeric" className={benchInput} />
+              </div>
+              <div>
+                <label className="block text-brand-500 text-[10px] font-heading tracking-wider uppercase mb-1.5">Run on</label>
+                <select
+                  value={backend}
+                  onChange={(e) => setBackend(e.target.value as '' | RenderBackend)}
+                  className={benchInput}
+                >
+                  <option value="">Configured chain</option>
+                  <option value="runpod">GPU cloud only</option>
+                  <option value="local">Local only</option>
+                </select>
               </div>
               {meta.kind === 'video' && (
                 <div>
@@ -588,6 +606,16 @@ function BenchOutput({ run, startedAt }: { run: BenchRun | null; startedAt: numb
       )}
       <div className="px-3 py-2 flex items-center justify-between bg-brand-950">
         <span className="text-brand-600 text-[10px] font-body">seed {run.seed}</span>
+        {/* Which machine served it. "It rendered" is only half the answer when
+            two backends can satisfy the same request. */}
+        {run.backend && (
+          <span className="text-brand-500 text-[10px] font-body">
+            on {run.backend === 'runpod' ? 'GPU cloud' : 'local'}
+            {run.attempts && run.attempts.length > 1 && (
+              <span className="text-amber-400/80"> (after {run.attempts.length - 1} fallback)</span>
+            )}
+          </span>
+        )}
         <a href={run.view_url} target="_blank" rel="noreferrer" download className="text-brand-300 hover:text-white text-[10px] font-heading tracking-wide">
           DOWNLOAD ↓
         </a>

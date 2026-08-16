@@ -761,6 +761,8 @@ export interface BenchRunInput {
   duration_seconds?: number
   width?: number
   height?: number
+  /** Omit to use the configured chain; naming one pins the run to it, no fallback. */
+  backend?: RenderBackend
 }
 
 export async function adminComfyRun(input: BenchRunInput): Promise<string> {
@@ -775,6 +777,10 @@ export interface BenchRun {
   seed?: number
   error?: string
   startedAt: number
+  /** Which machine actually served it. */
+  backend?: RenderBackend
+  /** Every backend tried, in order, with why each was left. */
+  attempts?: { backend: RenderBackend; ms: number; ok: boolean; error?: string }[]
 }
 
 export async function adminComfyGetRun(runId: string): Promise<BenchRun> {
