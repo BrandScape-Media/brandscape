@@ -411,6 +411,10 @@ function WorkflowBench({ comfyReady, healthLoaded }: { comfyReady: boolean; heal
   // machine with no fallback, so a failure is visible instead of being quietly
   // absorbed by the other backend.
   const [backend, setBackend] = useState<'' | RenderBackend>('')
+  // Google only. Which model suits a shot varies — 2.5 Flash often beats the
+  // Pro model on plain product photography — so it is a per-run choice, not
+  // just a deploy-time env var.
+  const [imageModel, setImageModel] = useState('')
   const [duration, setDuration] = useState('')
   const [width, setWidth] = useState('')
   const [height, setHeight] = useState('')
@@ -456,6 +460,7 @@ function WorkflowBench({ comfyReady, healthLoaded }: { comfyReady: boolean; heal
         ...(prompt.trim() ? { prompt: prompt.trim() } : {}),
         ...(seed.trim() ? { seed: Number(seed) } : {}),
         ...(backend ? { backend } : {}),
+        ...(imageModel ? { image_model: imageModel } : {}),
         ...(meta.kind === 'video' && duration.trim() ? { duration_seconds: Number(duration) } : {}),
         ...(width.trim() ? { width: Number(width) } : {}),
         ...(height.trim() ? { height: Number(height) } : {}),
@@ -515,6 +520,18 @@ function WorkflowBench({ comfyReady, healthLoaded }: { comfyReady: boolean; heal
                 <label className="block text-brand-500 text-[10px] font-heading tracking-wider uppercase mb-1.5">Seed</label>
                 <input value={seed} onChange={(e) => setSeed(e.target.value)} placeholder="random" inputMode="numeric" className={benchInput} />
               </div>
+              {meta.kind === 'image' && (
+                <div className="col-span-2">
+                  <label className="block text-brand-500 text-[10px] font-heading tracking-wider uppercase mb-1.5">Google model</label>
+                  <select value={imageModel} onChange={(e) => setImageModel(e.target.value)} className={benchInput}>
+                    <option value="">Default (IMAGE_MODEL)</option>
+                    <option value="gemini-3-pro-image">3 Pro — complex scenes</option>
+                    <option value="gemini-2.5-flash-image">2.5 Flash — often best on products</option>
+                    <option value="gemini-3.1-flash-image">3.1 Flash — versatile, 4K</option>
+                    <option value="gemini-3.1-flash-lite-image">3.1 Flash Lite — cheapest</option>
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-brand-500 text-[10px] font-heading tracking-wider uppercase mb-1.5">Run on</label>
                 <select

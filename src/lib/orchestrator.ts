@@ -763,6 +763,8 @@ export interface BenchRunInput {
   height?: number
   /** Omit to use the configured chain; naming one pins the run to it, no fallback. */
   backend?: RenderBackend
+  /** Google image model for this run only; omit to use the IMAGE_MODEL default. */
+  image_model?: string
 }
 
 export async function adminComfyRun(input: BenchRunInput): Promise<string> {
